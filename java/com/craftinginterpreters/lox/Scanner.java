@@ -84,14 +84,23 @@ class Scanner {
         break;
 //< two-char-tokens
 //> slash
+
+// Start of Chapter 4 Question 4 Segment
+
       case '/':
         if (match('/')) {
           // A comment goes until the end of the line.
           while (peek() != '\n' && !isAtEnd()) advance();
+        } else if (match('*')){
+          // if '*', calls blockComment to handle skipping block comment
+          blockComment();
         } else {
-          addToken(SLASH);
+          break;
         }
         break;
+
+// End of a Chapter 4 Question 4 Segment
+
 //< slash
 //> whitespace
 
@@ -130,6 +139,61 @@ class Scanner {
 //< char-error
     }
   }
+// Start of Chapter 4 Question 4 Segment
+    /*  Non-Nested Implementation
+  private void blockComment() {
+    // Keep track of line #'s'
+    while (!isAtEnd()) {
+      if (peek() == '\n') {
+        line++;
+      }
+      
+      // end of comment
+      if (peek() == '*' && peekNext() == '/') {
+        advance();
+        advance();
+        return;
+      }
+      advance();
+    }
+    
+    // reaching file without seeing end of block comment is an error
+    Lox.error(line, "Unterminated block comment.");
+  }
+    */
+
+  // Nested Version
+  private void blockComment() {
+    // Counter to see how many nested comments we are inside
+    int depth = 1;
+
+    // Keep scanning until we close all the comments or reach the end of file
+    while (depth > 0 && !isAtEnd()) {
+      if (peek() == '\n') {
+        // Count # of lines if we see newline
+        line++;
+      }
+      // increment depth if we see another /* 
+      if (peek() == '/' && peekNext() == '*') {
+        advance();
+        advance();
+        depth++;
+      // see */ decrement depth
+      } else if (peek() == '*' && peekNext() == '/') {
+        advance();
+        advance();
+        depth--;
+      // skip if we run into anything else
+      } else {
+        advance();
+      }
+    }
+    // report error if reach end of file before depth = 0
+    if (depth > 0) {
+      Lox.error(line, "Unterminated block comment.");
+    }
+  }
+// End of Chapter 4 Question 4 Segment
 //< scan-token
 //> identifier
   private void identifier() {
