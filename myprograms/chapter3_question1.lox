@@ -1,0 +1,9 @@
+print "Hey, Sample Lox Program!";
+var a = 5;
+var b = 6;
+print a * b * 5;
+print 1 / 0;
+var c;
+print c;
+print "This " + "is " + "concatenation";
+
