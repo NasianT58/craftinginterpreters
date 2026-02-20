@@ -52,10 +52,21 @@ class Parser {
     return equality();
 */
 //> Statements and State expression
-    return comma();
+    return conditional();
 //< Statements and State expression
   }
 
+// Gives error, because the AST for "Expr.Conditional" is not created hold ternary grammar
+private Expr conditional() {
+  Expr expr = equality(); // parsing the conditional first
+  if (match(QUESTION)) { // used to see if we see '?' to parse tenary
+    Expr thenBranch = expression(); // then expression
+    consume(COLON, "Expect ':' after then branch."); // make sure to expect ':'
+    Expr elseBranch = conditional(); //else-expression
+    expr = new Expr.Conditional(expr, thenBranch, elseBranch);
+  }
+  return expr;
+}
 // CS 4080 Ch 6. Q. 1
 private Expr comma() {
   Expr expr = equality();
