@@ -52,10 +52,11 @@ class Parser {
     return equality();
 */
 //> Statements and State expression
-    return conditional();
+    return comma();
 //< Statements and State expression
   }
 
+/* 
 // Gives error, because the AST for "Expr.Conditional" is not created hold ternary grammar
 private Expr conditional() {
   Expr expr = equality(); // parsing the conditional first
@@ -67,6 +68,8 @@ private Expr conditional() {
   }
   return expr;
 }
+*/
+
 // CS 4080 Ch 6. Q. 1
 private Expr comma() {
   Expr expr = equality();
@@ -479,13 +482,50 @@ private Expr comma() {
   }
 //< Functions call
 //> primary
-  private Expr primary() {
+  private Expr primary() { // parsing primary expressions
     if (match(FALSE)) return new Expr.Literal(false);
     if (match(TRUE)) return new Expr.Literal(true);
     if (match(NIL)) return new Expr.Literal(null);
 
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
+    }
+
+    // Parsing group expressions
+    if (match(LEFT_PAREN)) {
+      // Recursively parsing inner expression
+      Expr expr = expression();
+      consume(RIGHT_PAREN, "Expect ')' after expression.");
+      return new Expr.Grouping(expr);
+    }
+
+    // Error productions for leading binary operators
+    if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+      error(previous(), "Missing left-hand operand.");
+      // Parses right hand side even with error so parser can continue
+      equality();
+      return null;
+    }
+
+    if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+      error(previous(), "Missing left-hand operand");
+      // Consumes the right hand side
+      comparison();
+      return null;
+    }
+
+    if (match(PLUS)) {
+      error(previous(), "Missing left-hand operand.");
+      // Consume right hand side
+      term();
+      return null;
+    }
+
+    if (match(SLASH, STAR)) {
+      error(previous(), "Missing left-hand operand");
+      // Consume right hand side
+      factor();
+      return null;
     }
 //> Inheritance parse-super
 
