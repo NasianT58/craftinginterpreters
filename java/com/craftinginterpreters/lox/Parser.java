@@ -52,9 +52,24 @@ class Parser {
     return equality();
 */
 //> Statements and State expression
-    return assignment();
+    return comma();
 //< Statements and State expression
   }
+
+// CS 4080 Ch 6. Q. 1
+private Expr comma() {
+  Expr expr = equality();
+  // enter loop if we see comma
+  while (match(COMMA)) {
+    Token operator = previous();
+    // Parse right side
+    Expr right = equality();
+    // Build Binary Node
+    expr = new Expr.Binary(expr, operator, right);
+  }
+  return expr;
+}
+
 //< expression
 //> Statements and State declaration
   private Stmt declaration() {
@@ -420,7 +435,8 @@ class Parser {
           error(peek(), "Can't have more than 255 arguments.");
         }
 //< check-max-arity
-        arguments.add(expression());
+        // change to "equality" instead of "expression" for binding
+        arguments.add(equality());
       } while (match(COMMA));
     }
 
