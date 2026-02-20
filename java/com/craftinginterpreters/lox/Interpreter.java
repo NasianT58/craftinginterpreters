@@ -301,12 +301,16 @@ class Interpreter implements Expr.Visitor<Object>,
         return (double)left - (double)right;
 //> binary-plus
       case PLUS:
+        // checks if EITHER  operand is a string
+        if (left instanceof String || right instanceof String) {
+          // Converts both operands to strings
+          // Concatenation using "+" operator
+          return stringify(left) + stringify(right);
+        }
+        // checks if BOTH operands are numbers
         if (left instanceof Double && right instanceof Double) {
+          // if both numbers, do addition and return
           return (double)left + (double)right;
-        } // [plus]
-
-        if (left instanceof String && right instanceof String) {
-          return (String)left + (String)right;
         }
 
 /* Evaluating Expressions binary-plus < Evaluating Expressions string-wrong-type
