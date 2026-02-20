@@ -320,6 +320,10 @@ class Interpreter implements Expr.Visitor<Object>,
       case SLASH:
 //> check-slash-operand
         checkNumberOperands(expr.operator, left, right);
+        // implement run time error for division by zero
+        if ((double) right == 0) {
+          throw new RuntimeError(expr.operator, "Division by zero.");
+        }
 //< check-slash-operand
         return (double)left / (double)right;
       case STAR:
