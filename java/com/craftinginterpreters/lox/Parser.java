@@ -18,6 +18,9 @@ class Parser {
 //< parse-error
   private final List<Token> tokens;
   private int current = 0;
+  // Ch 9 C.3 Loop Depth for counting inner/outer
+  private int loopDepth = 0;
+
 
   // Chapter 8 C.1 Fields
   private boolean allowExpression;
@@ -210,30 +213,28 @@ private Expr comma() {
     consume(RIGHT_PAREN, "Expect ')' after for clauses.");
 //< for-increment
 //> for-body
-    Stmt body = statement();
+// Chapter 9 C. 3 Parsing for For Loop Changes
+    try {
+      loopDepth++;
+      Stmt body = statement();
 
-//> for-desugar-increment
-    if (increment != null) {
-      body = new Stmt.Block(
-          Arrays.asList(
-              body,
-              new Stmt.Expression(increment)));
+      if (increment != null) {
+        body = new Stmt.Block(Arrays.asList(
+            body,
+            new Stmt.Expression(increment)));
+      }
+
+      if (condition == null) condition = new Expr.Literal(true);
+      body = new Stmt.While(condition, body);
+
+      if (initializer != null) {
+        body = new Stmt.Block(Arrays.asList(initializer, body));
+      }
+
+      return body;
+    } finally {
+      loopDepth--;
     }
-
-//< for-desugar-increment
-//> for-desugar-condition
-    if (condition == null) condition = new Expr.Literal(true);
-    body = new Stmt.While(condition, body);
-
-//< for-desugar-condition
-//> for-desugar-initializer
-    if (initializer != null) {
-      body = new Stmt.Block(Arrays.asList(initializer, body));
-    }
-
-//< for-desugar-initializer
-    return body;
-//< for-body
   }
 //< Control Flow for-statement
 //> Control Flow if-statement
@@ -288,9 +289,15 @@ private Expr comma() {
     consume(LEFT_PAREN, "Expect '(' after 'while'.");
     Expr condition = expression();
     consume(RIGHT_PAREN, "Expect ')' after condition.");
-    Stmt body = statement();
 
-    return new Stmt.While(condition, body);
+    // Ch 9. C. 3 Change the way it is parsed for while
+    try {
+      loopDepth++;
+      Stmt body = statement();
+      return new Stmt.While(condition, body);
+    } finally {
+      loopDepth--;
+    }
   }
 //< Control Flow while-statement
 //> Statements and State parse-expression-statement

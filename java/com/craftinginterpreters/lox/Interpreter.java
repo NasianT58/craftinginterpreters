@@ -31,6 +31,10 @@ private static Object uninitialized = new Object();
 //> Functions global-environment
   final Environment globals = new Environment();
   private Environment environment = globals;
+
+  // Ch 9 C.3 Added for BREAK statements
+  private static class BreakException extends RuntimeException {}
+
   
 //< Functions global-environment
 //> Resolving and Binding locals-field
@@ -250,13 +254,19 @@ private static Object uninitialized = new Object();
   }
 //< Statements and State visit-var
 //> Control Flow visit-while
+// Chapter 9. C3 Break Statements
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
-    while (isTruthy(evaluate(stmt.condition))) {
-      execute(stmt.body);
+    try {
+      while (isTruthy(evaluate(stmt.condition))) {
+        execute(stmt.body);
+      }
+    } catch (BreakException ex) {
+      // Do nothing, just exit the loop.
     }
     return null;
-  }
+}
+
 //< Control Flow visit-while
 //> Statements and State visit-assign
   @Override

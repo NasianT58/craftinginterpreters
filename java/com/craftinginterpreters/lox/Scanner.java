@@ -30,6 +30,9 @@ class Scanner {
     keywords.put("true",   TRUE);
     keywords.put("var",    VAR);
     keywords.put("while",  WHILE);
+    // Chapter 9 C.3, Add BREAK
+    keywords.put("break", BREAK);
+
   }
 //< keyword-map
   private final String source;

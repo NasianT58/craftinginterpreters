@@ -83,8 +83,10 @@ public class GenerateAst {
 */
 //> Control Flow while-ast
       "Var        : Token name, Expr initializer",
-      "While      : Expr condition, Stmt body"
+      "While      : Expr condition, Stmt body",
 //< Control Flow while-ast
+    // Chapter 9 C.3 Adding Break Support
+      "Break      : "
     ));
 //< Statements and State stmt-ast
 //< call-define-ast
@@ -175,7 +177,13 @@ public class GenerateAst {
     fieldList = fieldList.replace(",\n          ", ", ");
 //< omit
     // Store parameters in fields.
-    String[] fields = fieldList.split(", ");
+    // Ch 9 C.3 Update to Hold the Break
+    String[] fields;
+    if (fieldList.isEmpty()) {
+        fields = new String[0];      // no fields for Break
+    } else {
+        fields = fieldList.split(", ");
+    }
     for (String field : fields) {
       String name = field.split(" ")[1];
       writer.println("      this." + name + " = " + name + ";");
