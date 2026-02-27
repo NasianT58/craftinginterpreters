@@ -19,6 +19,11 @@ class Parser {
   private final List<Token> tokens;
   private int current = 0;
 
+  // Chapter 8 C.1 Fields
+  private boolean allowExpression;
+  private boolean foundExpression = false;
+
+
   Parser(List<Token> tokens) {
     this.tokens = tokens;
   }
@@ -31,6 +36,23 @@ class Parser {
     }
   }
 */
+  // Chapter 8 C.1, allows parser to return statement or expr
+  Object parseRepl() {
+    allowExpression = true;
+    List<Stmt> statements = new ArrayList<>();
+
+    while (!isAtEnd()) {
+      statements.add(declaration());
+
+      if (foundExpression) {
+        Stmt last = statements.get(statements.size() - 1);
+        return ((Stmt.Expression) last).expression;
+      }
+      allowExpression = false;
+    }
+      return statements;
+  }
+
 //> Statements and State parse
   List<Stmt> parse() {
     List<Stmt> statements = new ArrayList<>();
@@ -272,11 +294,18 @@ private Expr comma() {
   }
 //< Control Flow while-statement
 //> Statements and State parse-expression-statement
+// Ch 8 C.1, doesn't require ";" in REPL for statements
   private Stmt expressionStatement() {
     Expr expr = expression();
-    consume(SEMICOLON, "Expect ';' after expression.");
+
+    if (allowExpression && isAtEnd()) {
+      foundExpression = true;
+    } else {
+      consume(SEMICOLON, "Expect ';' after expression.");
+    }
     return new Stmt.Expression(expr);
   }
+
 //< Statements and State parse-expression-statement
 //> Functions parse-function
   private Stmt.Function function(String kind) {

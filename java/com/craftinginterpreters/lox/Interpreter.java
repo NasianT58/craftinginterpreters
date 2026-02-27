@@ -50,6 +50,17 @@ class Interpreter implements Expr.Visitor<Object>,
       public String toString() { return "<native fn>"; }
     });
   }
+
+  // Chapter 8 C.1 Statements will be executed, expressions will be evaluated and returned
+  String interpret(Expr expression) {
+    try {
+      Object value = evaluate(expression);
+      return stringify(value);
+    } catch (RuntimeError error) {
+      Lox.runtimeError(error);
+      return null;
+    }
+  }
   
 //< Functions interpreter-constructor
 /* Evaluating Expressions interpret < Statements and State interpret
