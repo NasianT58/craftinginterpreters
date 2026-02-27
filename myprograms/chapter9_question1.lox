@@ -1,0 +1,49 @@
+class True {
+    choose(thenFn, elseFn) {
+        return thenFn();
+    }
+}
+
+class False {
+    choose(thenFn, elseFn) {
+        return elseFn();
+    }
+}
+
+fun BoolObj(value) {
+    if (value) return True();
+    else return False();
+}
+
+fun IF(cond, thenFn, elseFn) {
+    return BoolObj(cond).choose(thenFn, elseFn);
+}
+
+var x = 10;
+
+fun then1() {
+    print "THEN branch ran";
+    return "x was > 5";
+}
+
+fun else1() {
+    print "ELSE branch ran";
+    return "x was <= 5";
+}
+
+IF(x > 5, then1, else1);
+
+x = 3;
+
+fun then2() {
+    print "THEN branch ran (2)";
+    return 222;
+}
+
+fun else2() {
+    print "ELSE branch ran (2)";
+    return 222;
+}
+
+var result = IF(x > 5, then2, else2);
+print result;
