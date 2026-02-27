@@ -24,9 +24,14 @@ class Interpreter implements Expr.Visitor<Object>,
 /* Statements and State environment-field < Functions global-environment
   private Environment environment = new Environment();
 */
+
+// Ch 8. C.2 Represents object that has been declared but not intiailized
+private static Object uninitialized = new Object();
+
 //> Functions global-environment
   final Environment globals = new Environment();
   private Environment environment = globals;
+  
 //< Functions global-environment
 //> Resolving and Binding locals-field
   private final Map<Expr, Integer> locals = new HashMap<>();
@@ -234,7 +239,8 @@ class Interpreter implements Expr.Visitor<Object>,
 //> Statements and State visit-var
   @Override
   public Void visitVarStmt(Stmt.Var stmt) {
-    Object value = null;
+    // Ch 9 C.2 Change from null to uninitialized
+    Object value = uninitialized;
     if (stmt.initializer != null) {
       value = evaluate(stmt.initializer);
     }
@@ -488,15 +494,19 @@ class Interpreter implements Expr.Visitor<Object>,
   }
 //< visit-unary
 //> Statements and State visit-variable
+// Ch 8 C.2 throws runtime error we read uninitialized
   @Override
   public Object visitVariableExpr(Expr.Variable expr) {
-/* Statements and State visit-variable < Resolving and Binding call-look-up-variable
-    return environment.get(expr.name);
-*/
-//> Resolving and Binding call-look-up-variable
-    return lookUpVariable(expr.name, expr);
-//< Resolving and Binding call-look-up-variable
+    Object value = environment.get(expr.name);
+    if (value == uninitialized) {
+      throw new RuntimeError(
+          expr.name,
+          "Variable must be initialized before use."
+      );
+    }
+    return value;
   }
+
 //> Resolving and Binding look-up-variable
   private Object lookUpVariable(Token name, Expr expr) {
     Integer distance = locals.get(expr);
