@@ -60,6 +60,22 @@ private static Object uninitialized = new Object();
     });
   }
 
+  // Chapter 10. Q.2: Named Functions
+  @Override
+  public Void visitFunctionStmt(Stmt.Function stmt) {
+    String fnName = stmt.name.lexeme;
+    environment.define(fnName, new LoxFunction(fnName, stmt.function, environment));
+    return null;
+  }
+
+  // Chapter 10. Q.2: Anonymous Functions
+  @Override
+  public Object visitFunctionExpr(Expr.Function expr) {
+    return new LoxFunction(null, expr, environment);
+  }
+
+
+
   // Chapter 8 C.1 Statements will be executed, expressions will be evaluated and returned
   String interpret(Expr expression) {
     try {
