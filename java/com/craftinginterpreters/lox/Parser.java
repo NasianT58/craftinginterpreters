@@ -111,7 +111,8 @@ private Expr comma() {
 
 //< expression
 //> Statements and State declaration
-// Chapter 10. Q.2: replace old declaration
+
+/*Chapter 10. Q.2: replace old declaration
   private Stmt declaration() {
     try {
         if (check(FUN) && checkNext(IDENTIFIER)) {
@@ -124,6 +125,23 @@ private Expr comma() {
     } catch (ParseError error) {
         synchronize();
         return null;
+    }
+  }
+*/
+
+private Stmt declaration() {
+    try {
+//> Classes match-class
+      if (match(CLASS)) return classDeclaration();
+//< Classes match-class
+//> Functions match-fun
+      if (match(FUN)) return function("function");
+//< Functions match-fun
+      if (match(VAR)) return varDeclaration();
+      return statement();
+    } catch (ParseError error) {
+      synchronize();
+      return null;
     }
   }
 
@@ -313,7 +331,7 @@ private Expr comma() {
     return new Stmt.Expression(expr);
   }
 
-// Chapter 10 Q.2 Function Body Method
+/* Chapter 10 Q.2 Function Body Method
   private Expr.Function functionBody(String kind) {
       consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
       List<Token> parameters = new ArrayList<>();
@@ -330,19 +348,46 @@ private Expr comma() {
       List<Stmt> body = block();
       return new Expr.Function(parameters, body);
   }
+  */
 
-  // Chapter 10. Q.2: Helper Method, replacing old
+  /* Chapter 10. Q.2: Helper Method, replacing old
   private Stmt.Function function(String kind) {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     return new Stmt.Function(name, functionBody(kind));
   } 
+  */
 
-  // Chapter 10. Q.2: Handling Named vs. Anonymous Functions
+   private Stmt.Function function(String kind) {
+    Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+//> parse-parameters
+    consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+    List<Token> parameters = new ArrayList<>();
+    if (!check(RIGHT_PAREN)) {
+      do {
+        if (parameters.size() >= 255) {
+          error(peek(), "Can't have more than 255 parameters.");
+        }
+
+        parameters.add(
+            consume(IDENTIFIER, "Expect parameter name."));
+      } while (match(COMMA));
+    }
+    consume(RIGHT_PAREN, "Expect ')' after parameters.");
+//< parse-parameters
+//> parse-body
+
+    consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
+    List<Stmt> body = block();
+    return new Stmt.Function(name, parameters, body);
+//< parse-body
+  }
+
+  /* Chapter 10. Q.2: Handling Named vs. Anonymous Functions
   private boolean checkNext(TokenType tokenType) {
     if (isAtEnd()) return false;
     if (tokens.get(current + 1).type == EOF) return false;
     return tokens.get(current + 1).type == tokenType;
-  }
+  } */
 
 
 //< Statements and State parse-expression-statement
@@ -558,9 +603,10 @@ private Expr comma() {
     if (match(FALSE)) return new Expr.Literal(false);
     if (match(TRUE)) return new Expr.Literal(true);
     if (match(NIL)) return new Expr.Literal(null);
-    // Chapter 10. Q.2
-    if (match(FUN)) return functionBody("function");
 
+    /* Chapter 10. Q.2
+    if (match(FUN)) return functionBody("function");
+    */ 
 
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
