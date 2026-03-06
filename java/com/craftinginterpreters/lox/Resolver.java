@@ -6,10 +6,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import com.craftinginterpreters.lox.Expr.Variable;
+
 class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private final Interpreter interpreter;
 //> scopes-field
-  private final Stack<Map<String, Boolean>> scopes = new Stack<>();
+
+  // Old Field
+  // private final Stack<Map<String, Boolean>> scopes = new Stack<>();
+
 //< scopes-field
 //> function-type-field
   private FunctionType currentFunction = FunctionType.NONE;
@@ -34,6 +39,26 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 //< function-type
 //> Classes class-type
+
+// Chapter 11. Q.3 Stack can track "variables" instead of just booleans
+  private final Stack<Map<String, Variable>> scopes = new Stack<>();
+
+// Chapter 11. Q.3
+  private static class Variable {
+    final Token name;
+    VariableState state;
+
+    private Variable(Token name, VariableState state) {
+      this.name = name;
+      this.state = state;
+    }
+  }
+
+  private enum VariableState {
+    DECLARED,
+    DEFINED,
+    READ
+  }
 
   private enum ClassType {
     NONE,
@@ -96,14 +121,27 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
     if (stmt.superclass != null) {
       beginScope();
-      scopes.peek().put("super", true);
+
+      //scopes.peek().put("super", true);
+
+      // Chapter 11. Q.3 don't store just a boolean anymore, have to change to variable object
+      scopes.peek().put("this", new Variable(
+        new Token(TokenType.THIS, "this", null, 0),
+        VariableState.DEFINED));
+
     }
 //< Inheritance begin-super-scope
 //> resolve-methods
 
 //> resolver-begin-this-scope
     beginScope();
-    scopes.peek().put("this", true);
+    // scopes.peek().put("this", true);
+
+    // Chapter 11. Q.3 don't store just a boolean anymore, have to change to variable object
+    scopes.peek().put("this", new Variable(
+      new Token(TokenType.THIS, "this", null, 0),
+      VariableState.DEFINED));
+
 
 //< resolver-begin-this-scope
     for (Stmt.Function method : stmt.methods) {
@@ -216,7 +254,9 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   @Override
   public Void visitAssignExpr(Expr.Assign expr) {
     resolve(expr.value);
-    resolveLocal(expr, expr.name);
+    // resolveLocal(expr, expr.name);
+    // Chapter 11. Q.3 Pass in False
+    resolveLocal(expr, expr.name, false);
     return null;
   }
 //< visit-assign-expr
@@ -289,9 +329,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
 //< invalid-super
-    resolveLocal(expr, expr.keyword);
+    // resolveLocal(expr, expr.keyword);
+    // Chapter 11. Q.3, Changed Data Structure
+    resolveLocal(expr, expr.keyword, false);
     return null;
   }
+
 //< Inheritance resolve-super-expr
 //> Classes resolver-visit-this
   @Override
@@ -304,7 +347,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
 //< this-outside-of-class
-    resolveLocal(expr, expr.keyword);
+    //resolveLocal(expr, expr.keyword);
+    resolveLocal(expr, expr.keyword, true);
     return null;
   }
 
@@ -317,6 +361,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 //< visit-unary-expr
 //> visit-variable-expr
+/*
   @Override
   public Void visitVariableExpr(Expr.Variable expr) {
     if (!scopes.isEmpty() &&
@@ -326,13 +371,29 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
     resolveLocal(expr, expr.name);
+    //resolveLocal(expr, expr.name, true);
     return null;
   }
+*/
 //< visit-variable-expr
 //> resolve-stmt
+
+// Chapter 11 Q.3
+  public Void visitVariableExpr(Expr.Variable expr) {
+    if (!scopes.isEmpty() &&
+        scopes.peek().containsKey(expr.name.lexeme) &&
+        scopes.peek().get(expr.name.lexeme).state == VariableState.DECLARED) {
+      Lox.error(expr.name,
+          "Can't read local variable in its own initializer.");
+    }
+    // Pass in True
+    resolveLocal(expr, expr.name, true);
+    return null;
+  }
   private void resolve(Stmt stmt) {
     stmt.accept(this);
   }
+
 //< resolve-stmt
 //> resolve-expr
   private void resolve(Expr expr) {
@@ -362,17 +423,46 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 //< restore-current-function
   }
 //< resolve-function
+
 //> begin-scope
+/*
   private void beginScope() {
     scopes.push(new HashMap<String, Boolean>());
   }
+*/
+
+// Chapter 11. Q.3 Replace beginScope to have Variables
+private void beginScope() {
+    scopes.push(new HashMap<String, Variable>());
+  }
+
 //< begin-scope
+
 //> end-scope
+
+/*
   private void endScope() {
     scopes.pop();
   }
+*/
+
+// Ch. 11 Q.3 Replace old endScope()
+ private void endScope() {
+  // Retrieve Current Scope
+    Map<String, Variable> scope = scopes.pop();
+  // Iterate through variables in local scope
+    for (Map.Entry<String, Variable> entry : scope.entrySet()) {
+      if (entry.getValue().state == VariableState.DEFINED) {
+        // Static Error if declared/defined but never used
+        Lox.error(entry.getValue().name, "Local variable is not used.");
+      }
+    }
+  }
+
+
 //< end-scope
 //> declare
+/* 
   private void declare(Token name) {
     if (scopes.isEmpty()) return;
 
@@ -386,18 +476,63 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 //< duplicate-variable
     scope.put(name.lexeme, false);
   }
+*/
+
+// Chapter 11. Q.3: 
+private void declare(Token name) {
+    if (scopes.isEmpty()) return;
+
+    Map<String, Variable> scope = scopes.peek();
+    if (scope.containsKey(name.lexeme)) {
+      Lox.error(name,
+          "Already variable with this name in this scope.");
+    }
+
+    scope.put(name.lexeme, new Variable(name, VariableState.DECLARED));
+  }
+
 //< declare
+
+
+
 //> define
+/*
   private void define(Token name) {
     if (scopes.isEmpty()) return;
     scopes.peek().put(name.lexeme, true);
   }
+*/
+
+// Ch 11. Q.3
+private void define(Token name) {
+    if (scopes.isEmpty()) return;
+    scopes.peek().get(name.lexeme).state = VariableState.DEFINED;
+  }
 //< define
+
+
 //> resolve-local
+
+/* Old Resolve Local
   private void resolveLocal(Expr expr, Token name) {
     for (int i = scopes.size() - 1; i >= 0; i--) {
       if (scopes.get(i).containsKey(name.lexeme)) {
         interpreter.resolve(expr, scopes.size() - 1 - i);
+        return;
+      }
+    }
+  }
+*/
+  // Chapter 11. Q.3 changed to mark USED when variable is accessed
+    private void resolveLocal(Expr expr, Token name, boolean isRead) {
+    for (int i = scopes.size() - 1; i >= 0; i--) {
+      if (scopes.get(i).containsKey(name.lexeme)) {
+        interpreter.resolve(expr, scopes.size() - 1 - i);
+
+        // Mark it used.
+        if (isRead) {
+          scopes.get(i).get(name.lexeme).state = VariableState.READ;
+        }
         return;
       }
     }
