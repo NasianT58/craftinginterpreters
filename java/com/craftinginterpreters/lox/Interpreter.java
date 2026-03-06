@@ -498,7 +498,11 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 //> Inheritance interpreter-visit-super
   @Override
   public Object visitSuperExpr(Expr.Super expr) {
-    int distance = locals.get(expr);
+
+    // Chapter 11. Q.4: Change Method to Return int[]
+    int[] location = locals.get(expr);
+    int distance = location[0];
+
     LoxClass superclass = (LoxClass)environment.getAt(
         distance, "super");
 //> super-find-this
@@ -524,7 +528,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 //> Classes interpreter-visit-this
   @Override
   public Object visitThisExpr(Expr.This expr) {
-    return lookUpVariable(expr.keyword, expr);
+    return lookupVariable(expr.keyword, expr);
   }
 //< Classes interpreter-visit-this
 //> visit-unary
@@ -550,6 +554,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 //< visit-unary
 //> Statements and State visit-variable
 // Ch 8 C.2 throws runtime error we read uninitialized
+/* Old Method
   @Override
   public Object visitVariableExpr(Expr.Variable expr) {
     Object value = environment.get(expr.name);
@@ -561,6 +566,24 @@ private final Map<Expr, int[]> locals = new HashMap<>();
     }
     return value;
   }
+*/
+
+// Chapter 11. C.4: Optimized to change lookupVariable call
+@Override
+public Object visitVariableExpr(Expr.Variable expr) {
+  Object value = lookupVariable(expr.name, expr);
+
+  if (value == uninitialized) {
+    throw new RuntimeError(
+        expr.name,
+        "Variable must be initialized before use."
+    );
+  }
+
+  return value;
+}
+
+
 
 //> Resolving and Binding look-up-variable
 /* Old Method
