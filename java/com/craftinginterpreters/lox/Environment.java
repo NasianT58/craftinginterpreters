@@ -1,7 +1,9 @@
 //> Statements and State environment-class
 package com.craftinginterpreters.lox;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class Environment {
@@ -9,6 +11,10 @@ class Environment {
   final Environment enclosing;
 //< enclosing-field
   private final Map<String, Object> values = new HashMap<>();
+
+// Chapter 11. Q.4: Fast indexed storage list
+private final List<Object> slots = new ArrayList<>();
+
 //> environment-constructors
   Environment() {
     enclosing = null;
@@ -53,10 +59,26 @@ class Environment {
   }
 //< environment-assign
 //> environment-define
+
+/* Original Method
   void define(String name, Object value) {
     values.put(name, value);
   }
+*/
+
+  // Chapter 11. Q.4
+  void define(String name, Object value) {
+    values.put(name, value);
+    slots.add(value); // Mirror value in the indexed slot
+}
+
 //< environment-define
+
+// Chapter 11 Q.4: O(1) retrieval using pre-calculated index
+  Object getAtIndex(int distance, int index) {
+    return ancestor(distance).slots.get(index);
+  }
+
 //> Resolving and Binding ancestor
   Environment ancestor(int distance) {
     Environment environment = this;

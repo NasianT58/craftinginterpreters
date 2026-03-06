@@ -20,6 +20,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private FunctionType currentFunction = FunctionType.NONE;
 //< function-type-field
 
+  // Chapter 11. Q.4: Tracks next available index for each nested scope
+  private final Stack<Integer> scopeNextIndex = new Stack<>();
+
+
   Resolver(Interpreter interpreter) {
     this.interpreter = interpreter;
   }
@@ -47,10 +51,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private static class Variable {
     final Token name;
     VariableState state;
+    // Chapter 11 Q.4: Add Index Field
+    final int index;
 
-    private Variable(Token name, VariableState state) {
+    // Chapter 11. Q.4 Added Index for parameter
+    private Variable(Token name, VariableState state, int index) {
       this.name = name;
       this.state = state;
+      // Chapter 11 Q.4: Add Index Field
+      this.index = index;
     }
   }
 
@@ -125,9 +134,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       //scopes.peek().put("super", true);
 
       // Chapter 11. Q.3 don't store just a boolean anymore, have to change to variable object
+      // Chapter 11. Q.4 Added "-1" to match Index Argument, Does not Matter
       scopes.peek().put("this", new Variable(
         new Token(TokenType.THIS, "this", null, 0),
-        VariableState.DEFINED));
+        VariableState.DEFINED, -1));
 
     }
 //< Inheritance begin-super-scope
@@ -138,9 +148,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     // scopes.peek().put("this", true);
 
     // Chapter 11. Q.3 don't store just a boolean anymore, have to change to variable object
+    // Chapter 11. Q.4 Added "-1" to match Index Argument, Does not Matter
     scopes.peek().put("this", new Variable(
       new Token(TokenType.THIS, "this", null, 0),
-      VariableState.DEFINED));
+      VariableState.DEFINED, -1));
 
 
 //< resolver-begin-this-scope
@@ -254,9 +265,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   @Override
   public Void visitAssignExpr(Expr.Assign expr) {
     resolve(expr.value);
-    // resolveLocal(expr, expr.name);
-    // Chapter 11. Q.3 Pass in False
+    
+    // Original Call
+    // Chapter 11. Q.4: Return to Original Call for Correct Parameters
+    resolveLocal(expr, expr.name);
+
+    /* Chapter 11. Q.3 Pass in False
     resolveLocal(expr, expr.name, false);
+    */
     return null;
   }
 //< visit-assign-expr
@@ -329,9 +345,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
 //< invalid-super
-    // resolveLocal(expr, expr.keyword);
-    // Chapter 11. Q.3, Changed Data Structure
+    
+    // Chapter 11. Q.4 Return to Original Call For Correct Parameters
+    resolveLocal(expr, expr.keyword);
+
+    /* Chapter 11. Q.3, Changed Data Structure
     resolveLocal(expr, expr.keyword, false);
+    */
+
     return null;
   }
 
@@ -347,8 +368,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
 //< this-outside-of-class
-    //resolveLocal(expr, expr.keyword);
+
+    resolveLocal(expr, expr.keyword);
+
+    /*  Chapter 11. Q.3
     resolveLocal(expr, expr.keyword, true);
+    */
     return null;
   }
 
@@ -386,8 +411,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       Lox.error(expr.name,
           "Can't read local variable in its own initializer.");
     }
-    // Pass in True
+
+    // Chapter 11. Q.4 Change Call to Match Parameters
+    resolveLocal(expr, expr.name);
+
+    /* Chapter 11. Q.3 Pass in True
     resolveLocal(expr, expr.name, true);
+    */
+
     return null;
   }
   private void resolve(Stmt stmt) {
@@ -425,15 +456,23 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 //< resolve-function
 
 //> begin-scope
-/*
+
+/* Original Code
   private void beginScope() {
     scopes.push(new HashMap<String, Boolean>());
   }
 */
 
-// Chapter 11. Q.3 Replace beginScope to have Variables
+/*  Chapter 11. Q.3 Replace beginScope to have Variables
 private void beginScope() {
     scopes.push(new HashMap<String, Variable>());
+  }
+*/
+
+  // Chapter 11. Q.4: Initialize Index for New Scope Addition
+private void beginScope() {
+    scopes.push(new HashMap<String, Variable>());
+    scopeNextIndex.push(0);
   }
 
 //< begin-scope
@@ -462,7 +501,8 @@ private void beginScope() {
 
 //< end-scope
 //> declare
-/* 
+
+/* Original Code
   private void declare(Token name) {
     if (scopes.isEmpty()) return;
 
@@ -478,7 +518,7 @@ private void beginScope() {
   }
 */
 
-// Chapter 11. Q.3: 
+/* Chapter 11. Q.3: 
 private void declare(Token name) {
     if (scopes.isEmpty()) return;
 
@@ -490,6 +530,18 @@ private void declare(Token name) {
 
     scope.put(name.lexeme, new Variable(name, VariableState.DECLARED));
   }
+*/
+  // Chapter 11. Q.4: Added and Edited Method
+  private void declare(Token name) {
+    if (scopes.isEmpty()) return;
+
+    // Assign and increment the unique index for this scope
+    int index = scopeNextIndex.peek();
+    scopeNextIndex.set(scopeNextIndex.size() - 1, index + 1);
+
+    // Store the index inside the Variable metadata
+    scopes.peek().put(name.lexeme, new Variable(name, VariableState.DECLARED, index));
+}
 
 //< declare
 
@@ -513,7 +565,7 @@ private void define(Token name) {
 
 //> resolve-local
 
-/* Old Resolve Local
+/* Original Code
   private void resolveLocal(Expr expr, Token name) {
     for (int i = scopes.size() - 1; i >= 0; i--) {
       if (scopes.get(i).containsKey(name.lexeme)) {
@@ -523,7 +575,7 @@ private void define(Token name) {
     }
   }
 */
-  // Chapter 11. Q.3 changed to mark USED when variable is accessed
+  /* Chapter 11. Q.3 changed to mark USED when variable is accessed
     private void resolveLocal(Expr expr, Token name, boolean isRead) {
     for (int i = scopes.size() - 1; i >= 0; i--) {
       if (scopes.get(i).containsKey(name.lexeme)) {
@@ -537,5 +589,20 @@ private void define(Token name) {
       }
     }
   }
+  */
+  
+  // Chapter 11. Q.4
+  private void resolveLocal(Expr expr, Token name) {
+    for (int i = scopes.size() - 1; i >= 0; i--) {
+        if (scopes.get(i).containsKey(name.lexeme)) {
+            Variable variable = scopes.get(i).get(name.lexeme);
+
+            // Pass both depth and unique index to the interpreter
+            interpreter.resolve(expr, scopes.size() - 1 - i, variable.index);
+            return;
+        }
+    }
+}
+
 //< resolve-local
 }

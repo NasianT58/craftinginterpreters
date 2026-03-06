@@ -38,7 +38,14 @@ private static Object uninitialized = new Object();
   
 //< Functions global-environment
 //> Resolving and Binding locals-field
+
+/* Original Field
   private final Map<Expr, Integer> locals = new HashMap<>();
+*/
+
+// Chapter 11: Q.4: Changed map to store {depth, index} array
+private final Map<Expr, int[]> locals = new HashMap<>();
+
 //< Resolving and Binding locals-field
 //> Statements and State environment-field
 
@@ -118,9 +125,17 @@ private static Object uninitialized = new Object();
   }
 //< Statements and State execute
 //> Resolving and Binding resolve
+
+/* Old Method
   void resolve(Expr expr, int depth) {
     locals.put(expr, depth);
+  } */
+
+  // Chapter 11. Q.4: Add to Accept Index
+  void resolve(Expr expr, int depth, int index) {
+    locals.put(expr, new int[]{depth, index});
   }
+
 //< Resolving and Binding resolve
 //> Statements and State execute-block
   void executeBlock(List<Stmt> statements,
@@ -283,20 +298,36 @@ private static Object uninitialized = new Object();
 
 //< Control Flow visit-while
 //> Statements and State visit-assign
+ 
   @Override
   public Object visitAssignExpr(Expr.Assign expr) {
     Object value = evaluate(expr.value);
+
 /* Statements and State visit-assign < Resolving and Binding resolved-assign
     environment.assign(expr.name, value);
 */
+
 //> Resolving and Binding resolved-assign
 
+/* Replace
     Integer distance = locals.get(expr);
     if (distance != null) {
       environment.assignAt(distance, expr.name, value);
     } else {
       globals.assign(expr.name, value);
     }
+*/
+
+
+  // Chapter 11. Q.4: Will now Return a int[] instead of an Integer
+  int[] location = locals.get(expr);
+
+  if (location != null) {
+    environment.assignAt(location[0], expr.name, value);
+  } else {
+    globals.assign(expr.name, value);
+  }
+
 
 //< Resolving and Binding resolved-assign
     return value;
@@ -532,6 +563,7 @@ private static Object uninitialized = new Object();
   }
 
 //> Resolving and Binding look-up-variable
+/* Old Method
   private Object lookUpVariable(Token name, Expr expr) {
     Integer distance = locals.get(expr);
     if (distance != null) {
@@ -540,6 +572,18 @@ private static Object uninitialized = new Object();
       return globals.get(name);
     }
   }
+*/
+  private Object lookupVariable(Token name, Expr expr) {
+    int[] location = locals.get(expr); // ADDED: Retrieve {depth, index}
+
+    if (location != null) {
+        // Optimized lookup using getAtIndex
+        return environment.getAtIndex(location[0], location[1]);
+    } else {
+        return globals.get(name); // Fallback for global variables
+    }
+}
+
 //< Resolving and Binding look-up-variable
 //< Statements and State visit-variable
 //> check-operand
