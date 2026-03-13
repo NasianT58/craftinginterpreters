@@ -35,6 +35,11 @@ class LoxFunction implements LoxCallable {
     this.declaration = declaration;
   }
 
+  // Chapter 12 Q.2: Added isGetter helper function
+  public boolean isGetter() {
+    return declaration.params == null;
+  }
+
   /* Chapter 10, Q. 2, Replace COnstructor
   LoxFunction(String name,
             Expr.Function declaration,
@@ -92,10 +97,20 @@ class LoxFunction implements LoxCallable {
 //> call-closure
     Environment environment = new Environment(closure);
 //< call-closure
+/* Old
     for (int i = 0; i < declaration.params.size(); i++) {
       environment.define(declaration.params.get(i).lexeme,
           arguments.get(i));
     }
+*/
+
+// Chapter 12 Q.2: Getter Functions have params == null --> no args are bound
+    if (declaration.params != null) {
+    for (int i = 0; i < declaration.params.size(); i++) {
+      environment.define(declaration.params.get(i).lexeme,
+          arguments.get(i));
+    }
+  }
 
 /* Functions function-call < Functions catch-return
     interpreter.executeBlock(declaration.body, environment);

@@ -471,11 +471,24 @@ private final Map<Expr, int[]> locals = new HashMap<>();
   }
 //< Functions visit-call
 //> Classes interpreter-visit-get
+
+//Chapter 12 Q.2: Edited visitGetExpr
   @Override
   public Object visitGetExpr(Expr.Get expr) {
     Object object = evaluate(expr.object);
+
     if (object instanceof LoxInstance) {
-      return ((LoxInstance) object).get(expr.name);
+      // return ((LoxInstance) object).get(expr.name);
+
+      // Chapter 12 Q.2:getter functions have params as null, so no arguments are bound
+      Object result = ((LoxInstance) object).get(expr.name);
+
+      if (result instanceof LoxFunction &&
+        ((LoxFunction) result).isGetter()) {
+        result = ((LoxFunction) result).call(this, null);
+      }
+      
+      return result;
     }
 
     throw new RuntimeError(expr.name,

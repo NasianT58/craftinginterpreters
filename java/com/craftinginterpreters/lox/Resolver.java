@@ -446,6 +446,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private void resolveFunction(Stmt.Function function) {
 */
 //> set-current-function
+/* Old Method
   private void resolveFunction(
       Stmt.Function function, FunctionType type) {
     FunctionType enclosingFunction = currentFunction;
@@ -464,6 +465,25 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 //< restore-current-function
   }
 //< resolve-function
+*/
+
+// Chapter 12 Q.2: Declares and Defines a function's scope by parameters
+// If function is a getter, it has no parameters
+  private void resolveFunction(Stmt.Function function, FunctionType type) {
+    FunctionType enclosingFunction = currentFunction;
+    currentFunction = type;
+
+    beginScope();
+    if (function.params != null) {
+      for (Token param : function.params) {
+        declare(param);
+       define(param);
+      }
+    }
+    resolve(function.body);
+   endScope();
+    currentFunction = enclosingFunction;
+  }
 
 //> begin-scope
 
