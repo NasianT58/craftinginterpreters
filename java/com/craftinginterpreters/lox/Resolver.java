@@ -152,6 +152,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     scopes.peek().put("this", new Variable(
       new Token(TokenType.THIS, "this", null, 0),
       VariableState.DEFINED, -1));
+    // Chapter 13 Q.2: Allows resolver to recognize inner as a valid variable inside methods
+    scopes.peek().put("inner", new Variable(
+      new Token(TokenType.THIS, "this", null, 0),
+      VariableState.DEFINED, -1));
 
 
 //< resolver-begin-this-scope

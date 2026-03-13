@@ -52,10 +52,35 @@ class LoxClass extends LoxInstance implements LoxCallable {
 
 //< lox-class-methods
 //> lox-class-find-method
+/*
   LoxFunction findMethod(String name) {
     if (methods.containsKey(name)) {
       return methods.get(name);
     }
+*/
+
+// Chapter 13 Q.2: Finds Method with Given Name amd sets up "inner" reference to next method
+// down the inheritance chain
+  LoxFunction findMethod(LoxInstance instance, String name) {
+    LoxFunction method = null;
+    LoxFunction inner = null;
+    LoxClass klass = this;
+
+    while (klass != null) {
+      if (klass.methods.containsKey(name)) {
+       inner = method;
+        method = klass.methods.get(name);
+      }
+
+      klass = klass.superclass;
+    }
+
+    if (method != null) {
+      return method.bind(instance, inner);
+    }
+
+    return null;
+  }
 
 /*
 //> Inheritance find-method-recurse-superclass
@@ -81,7 +106,9 @@ class LoxClass extends LoxInstance implements LoxCallable {
 //> lox-class-call-initializer
     LoxFunction initializer = findMethod("init");
     if (initializer != null) {
-      initializer.bind(instance).call(interpreter, arguments);
+      // initializer.bind(instance).call(interpreter, arguments);
+      // Chapter 13 Q.2 Calls the Initializer
+      initializer.call(interpreter, arguments);
     }
 
 //< lox-class-call-initializer
