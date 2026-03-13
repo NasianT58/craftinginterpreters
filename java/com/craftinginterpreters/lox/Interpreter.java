@@ -65,6 +65,26 @@ private final Map<Expr, int[]> locals = new HashMap<>();
       @Override
       public String toString() { return "<native fn>"; }
     });
+
+    // Chapter 13 Q.3: Global Definition For Array
+      globals.define("Array", new LoxCallable() {
+        @Override
+        public int arity() {
+          return 1; // it takes 1 argument: the array size
+        }
+
+        @Override
+        public Object call(Interpreter interpreter, List<Object> arguments) {
+          int size = (int)(double) arguments.get(0); // cast double -> int
+          return new LoxArray(size); // return a new LoxArray instance
+        }
+
+        @Override
+        public String toString() {
+          return "<native fn Array>";
+        } 
+    });
+
   }
 
   /*  Chapter 10. Q.2: Named Functions
