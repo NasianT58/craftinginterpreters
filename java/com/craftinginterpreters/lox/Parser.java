@@ -161,8 +161,21 @@ private Stmt declaration() {
     consume(LEFT_BRACE, "Expect '{' before class body.");
 
     List<Stmt.Function> methods = new ArrayList<>();
+
+    // Chapter 12 Q.1:
+    List<Stmt.Function> classMethods = new ArrayList<>();
+    consume(LEFT_BRACE, "Expect '{' before class body.");
+
+    /* Old Statement
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
       methods.add(function("method"));
+    } */
+  
+    // Chapter 12 Q.1: see "class" before method name -> static method
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      boolean isClassMethod = match(CLASS);
+      (isClassMethod ? classMethods : methods).add(function("method"));
     }
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");

@@ -160,6 +160,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
   }
 //< Statements and State visit-block
 //> Classes interpreter-visit-class
+/* Old Method
   @Override
   public Void visitClassStmt(Stmt.Class stmt) {
 //> Inheritance interpret-superclass
@@ -171,6 +172,33 @@ private final Map<Expr, int[]> locals = new HashMap<>();
             "Superclass must be a class.");
       }
     }
+*/
+
+// Chapter 12 Q.1: LoxClass is an instance of LoxInstance
+  @Override
+  public Void visitClassStmt(Stmt.Class stmt) {
+    environment.define(stmt.name.lexeme, null);
+
+    Map<String, LoxFunction> classMethods = new HashMap<>();
+    for (Stmt.Function method : stmt.classMethods) {
+      LoxFunction function = new LoxFunction(method, environment, false);
+      classMethods.put(method.name.lexeme, function);
+    }
+
+    LoxClass metaclass = new LoxClass(null,
+        stmt.name.lexeme + " metaclass", classMethods);
+
+    Map<String, LoxFunction> methods = new HashMap<>();
+    for (Stmt.Function method : stmt.methods) {
+      LoxFunction function = new LoxFunction(method, environment,
+          method.name.lexeme.equals("init"));
+      methods.put(method.name.lexeme, function);
+    }
+
+    LoxClass klass = new LoxClass(metaclass, stmt.name.lexeme, methods);
+    environment.assign(stmt.name, klass);
+    return null;
+  }
 
 //< Inheritance interpret-superclass
     environment.define(stmt.name.lexeme, null);
@@ -219,7 +247,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 //< Classes interpreter-visit-class
 //> Statements and State visit-expression-stmt
   @Override
-  public Void visitExpressionStmt(Stmt.Expression stmt) {
+  public void visitExpressionStmt(Stmt.Expression stmt) {
     evaluate(stmt.expression);
     return null;
   }

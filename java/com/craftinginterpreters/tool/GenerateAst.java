@@ -62,8 +62,13 @@ public class GenerateAst {
       "Class      : Token name, List<Stmt.Function> methods",
 */
 //> Inheritance superclass-ast
+    /*   "Class      : Token name, Expr.Variable superclass," +
+                  " List<Stmt.Function> methods" */
+                  
+// Chapter 12 Q.1: Modified to have classMethods syntax.
       "Class      : Token name, Expr.Variable superclass," +
-                  " List<Stmt.Function> methods",
+              " List<Stmt.Function> methods," +
+              " List<Stmt.Function> classMethods",
 //< Inheritance superclass-ast
       "Expression : Expr expression",
 //> Functions function-ast

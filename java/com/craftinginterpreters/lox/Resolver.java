@@ -161,9 +161,19 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       if (method.name.lexeme.equals("init")) {
         declaration = FunctionType.INITIALIZER;
       }
-
 //< resolver-initializer-type
       resolveFunction(method, declaration); // [local]
+    }
+    
+    // Chapter 12. Q.1: Resolving class methods
+    // "classMethods" may not get recognized if AST Generator is not compiled
+    for (Stmt.Function method : stmt.classMethods) {
+      beginScope();
+      scopes.peek().put("this", new Variable(
+        new Token(TokenType.THIS, "this", null, 0),
+        VariableState.DEFINED, -1));
+      resolveFunction(method, FunctionType.METHOD);
+      endScope();
     }
 
 //> resolver-end-this-scope

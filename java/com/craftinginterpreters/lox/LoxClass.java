@@ -8,11 +8,15 @@ import java.util.Map;
 class LoxClass {
 */
 //> lox-class-callable
-class LoxClass implements LoxCallable {
+
+// Chapter 12. Q.11 Changing Declaration of Lox
+class LoxClass extends LoxInstance implements LoxCallable {
 //< lox-class-callable
   final String name;
 //> Inheritance lox-class-superclass-field
+/*
   final LoxClass superclass;
+*/
 //< Inheritance lox-class-superclass-field
 /* Classes lox-class < Classes lox-class-methods
 
@@ -27,13 +31,25 @@ class LoxClass implements LoxCallable {
   LoxClass(String name, Map<String, LoxFunction> methods) {
 */
 //> Inheritance lox-class-constructor
+
+/* Old Constructor
   LoxClass(String name, LoxClass superclass,
            Map<String, LoxFunction> methods) {
     this.superclass = superclass;
 //< Inheritance lox-class-constructor
     this.name = name;
     this.methods = methods;
+  } */
+
+  // Chapter 12 Q.1: New Constructor
+  // Classes themselves are instances
+  LoxClass(LoxClass metaclass, String name,
+        Map<String, LoxFunction> methods) {
+    super(metaclass);
+    this.name = name;
+    this.methods = methods;
   }
+
 //< lox-class-methods
 //> lox-class-find-method
   LoxFunction findMethod(String name) {
@@ -41,10 +57,12 @@ class LoxClass implements LoxCallable {
       return methods.get(name);
     }
 
+/*
 //> Inheritance find-method-recurse-superclass
     if (superclass != null) {
       return superclass.findMethod(name);
     }
+*/
 
 //< Inheritance find-method-recurse-superclass
     return null;
