@@ -38,6 +38,7 @@ typedef struct {
 } CallFrame;
 //< Calls and Functions call-frame
 
+// Old VM Struct
 typedef struct {
 /* A Virtual Machine vm-h < Calls and Functions frame-array
   Chunk* chunk;
@@ -80,6 +81,17 @@ typedef struct {
   Obj** grayStack;
 //< Garbage Collection vm-gray-stack
 } VM;
+
+// Chapter 15 Question 3: 
+/*
+typedef struct {
+  Chunk* chunk;
+  uint8_t* ip;
+  Value* stack;
+  int stackCount;       // replace stackTop pointer
+  int stackCapacity;    // add stackCapacity
+} VM;
+*/
 
 //> interpret-result
 typedef enum {

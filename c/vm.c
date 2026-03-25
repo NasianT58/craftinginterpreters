@@ -43,6 +43,15 @@ static void resetStack() {
 }
 //< reset-stack
 //> Types of Values runtime-error
+
+
+// Chapter 15 Question 3: Replace Old resetStack
+/*
+static void resetStack() {
+  vm.stackCount = 0;
+}
+*/
+
 static void runtimeError(const char* format, ...) {
   va_list args;
   va_start(args, format);
@@ -95,6 +104,7 @@ static void defineNative(const char* name, NativeFn function) {
 }
 //< Calls and Functions define-native
 
+
 void initVM() {
 //> call-reset-stack
   resetStack();
@@ -132,6 +142,21 @@ void initVM() {
 //< Calls and Functions define-native-clock
 }
 
+// Chapter 15 Challenge 3: Replace exisiting stack initialization
+/*
+void initVM() {
+  vm.stack = NULL;
+  vm.stackCapacity = 0;
+  resetStack();
+} */
+
+// Chapter 15 Challenge 3: Changes to freeVM() (From TB)
+/*
+  void freeVM() {
+    free(vm.stack);
+  }
+*/
+
 void freeVM() {
 //> Global Variables free-globals
   freeTable(&vm.globals);
@@ -152,11 +177,37 @@ void push(Value value) {
   vm.stackTop++;
 }
 //< push
+
+// Chapter 15 Challenge 3: Replace Old push():
+/*
+void push(Value value) {
+  if (vm.stackCapacity < vm.stackCount + 1) {
+    int oldCapacity = vm.stackCapacity;
+    vm.stackCapacity = GROW_CAPACITY(oldCapacity);
+    vm.stack = GROW_ARRAY(Value, vm.stack,
+                          oldCapacity, vm.stackCapacity);
+  }
+
+  vm.stack[vm.stackCount] = value;
+  vm.stackCount++;
+}
+*/
+
+
 //> pop
 Value pop() {
   vm.stackTop--;
   return *vm.stackTop;
 }
+
+// Chapter 15 Challenge 3: Replace old pop()
+/*
+  Value pop() {
+  vm.stackCount--;
+  return vm.stack[vm.stackCount];
+}
+*/
+
 //< pop
 //> Types of Values peek
 static Value peek(int distance) {
