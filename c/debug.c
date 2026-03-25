@@ -65,6 +65,19 @@ static int jumpInstruction(const char* name, int sign,
   return offset + 3;
 }
 //< Jumping Back and Forth jump-instruction
+
+// Chapter 14 Challenge 2: Implement helper function for disassmebleInstruction()
+static int longConstantInstruction(const char* name, Chunk* chunk,
+                                   int offset) {
+  uint32_t constant = chunk->code[offset + 1] |
+                     (chunk->code[offset + 2] << 8) |
+                     (chunk->code[offset + 3] << 16);
+  printf("%-16s %4d '", name, constant);
+  printValue(chunk->constants.values[constant]);
+  printf("'\n");
+  return offset + 4;
+}
+
 //> disassemble-instruction
 int disassembleInstruction(Chunk* chunk, int offset) {
   printf("%04d ", offset);
@@ -84,6 +97,9 @@ int disassembleInstruction(Chunk* chunk, int offset) {
     case OP_CONSTANT:
       return constantInstruction("OP_CONSTANT", chunk, offset);
 //< disassemble-constant
+// Chapter 14 Challenge 2: Add new case for OP_CONSTANT_LONG
+    case OP_CONSTANT_LONG:
+      return longConstantInstruction("OP_CONSTANT_LONG", chunk, offset);
 //> Types of Values disassemble-literals
     case OP_NIL:
       return simpleInstruction("OP_NIL", offset);

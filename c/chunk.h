@@ -11,6 +11,8 @@
 typedef enum {
 //> op-constant
   OP_CONSTANT,
+// Chapter 14 Challenge 2: Add OP_CONSTANT_LONG
+  OP_CONSTANT_LONG,
 //< op-constant
 //> Types of Values literal-ops
   OP_NIL,
@@ -156,5 +158,8 @@ int addConstant(Chunk* chunk, Value value);
 
 // Chapter 14 Challenge 1: Define Helper Function
 int getLine(Chunk* chunk, int instruction);
+
+// Chapter 14 Challenge 2: Declare new Function
+void writeConstant(Chunk* chunk, Value value, int line);
 
 #endif
