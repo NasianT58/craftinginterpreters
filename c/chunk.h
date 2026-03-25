@@ -104,6 +104,24 @@ typedef enum {
 //< op-enum
 //> chunk-struct
 
+// Chapter 14 Challenge 1
+typedef struct {
+  int offset;
+  int line;
+} LineStart;
+
+// Chapter 14 Challenge 1: Added LineCount, LineCapacity, and replace old int* lines
+typedef struct {
+  int count;
+  int capacity;
+  uint8_t* code;
+  ValueArray constants;
+  int lineCount;
+  int lineCapacity;
+  LineStart* lines;
+} Chunk;
+
+/* Old Struct typedef
 typedef struct {
 //> count-and-capacity
   int count;
@@ -119,6 +137,7 @@ typedef struct {
 } Chunk;
 //< chunk-struct
 //> init-chunk-h
+*/
 
 void initChunk(Chunk* chunk);
 //< init-chunk-h
@@ -134,5 +153,8 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line);
 //> add-constant-h
 int addConstant(Chunk* chunk, Value value);
 //< add-constant-h
+
+// Chapter 14 Challenge 1: Define Helper Function
+int getLine(Chunk* chunk, int instruction);
 
 #endif

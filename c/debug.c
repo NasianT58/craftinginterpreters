@@ -8,6 +8,8 @@
 //> debug-include-value
 #include "value.h"
 //< debug-include-value
+// Chapter 14 Challenge 1: Include chunk.h
+#include "chunk.h"
 
 void disassembleChunk(Chunk* chunk, const char* name) {
   printf("== %s ==\n", name);
@@ -67,11 +69,12 @@ static int jumpInstruction(const char* name, int sign,
 int disassembleInstruction(Chunk* chunk, int offset) {
   printf("%04d ", offset);
 //> show-location
-  if (offset > 0 &&
-      chunk->lines[offset] == chunk->lines[offset - 1]) {
+  // Chapter 14 Challenge 1 Use Function when diassembling an Instruction
+  int line = getLine(chunk, offset);
+  if (offset > 0 && line == getLine(chunk, offset - 1)) {
     printf("   | ");
   } else {
-    printf("%4d ", chunk->lines[offset]);
+    printf("%4d ", line);
   }
 //< show-location
   
