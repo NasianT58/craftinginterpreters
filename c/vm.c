@@ -497,6 +497,14 @@ static InterpretResult run() {
     } while (false)
 //< Types of Values binary-op
 
+/* Chapter 15 Challenge 4: Replace TB BINARY_OP with:
+#define BINARY_OP(op) \
+  do { \
+    vm.stackTop[-2] = vm.stackTop[-2] op vm.stackTop[-1]; \
+    vm.stackTop--; \
+  } while (false)
+*/
+
   for (;;) {
 //> trace-execution
 #ifdef DEBUG_TRACE_EXECUTION
@@ -697,6 +705,10 @@ static InterpretResult run() {
 */
 /* A Virtual Machine op-negate < Types of Values op-negate
       case OP_NEGATE:   push(-pop()); break;
+      Chapter 15 Question 4: Would Replace With:
+      case OP_NEGATE:
+        vm.stackTop[-1] = -vm.stackTop[-1];
+        break;
 */
 /* Types of Values op-arithmetic < Strings add-strings
       case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
