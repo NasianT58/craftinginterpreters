@@ -36,6 +36,7 @@ typedef struct {
 typedef enum {
   PREC_NONE,
   PREC_ASSIGNMENT,  // =
+  PREC_CONDITIONAL, // ?: Chapter 17 Challenge 3
   PREC_OR,          // or
   PREC_AND,         // and
   PREC_EQUALITY,    // == !=
@@ -408,6 +409,8 @@ static void declaration();
 //< Global Variables forward-declarations
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
+// Chapter 17 Challenge  3
+static void conditional(bool canAssign);
 
 //< Compiling Expressions forward-declarations
 //> Global Variables identifier-constant
@@ -620,6 +623,15 @@ static void binary(bool canAssign) {
     default: return; // Unreachable.
   }
 }
+
+// Chapter 17 Challenge 3
+static void conditional(bool canAssign) {
+  parsePrecedence(PREC_CONDITIONAL);
+  consume(TOKEN_COLON, "Expect ':' after then branch of conditional operator.");
+  parsePrecedence(PREC_ASSIGNMENT);
+}
+
+
 //< Compiling Expressions binary
 //> Calls and Functions compile-call
 static void call(bool canAssign) {
@@ -974,6 +986,9 @@ ParseRule rules[] = {
   [TOKEN_WHILE]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
+  // Chapter 17 Challenge 3: Add Rules
+  [TOKEN_QUESTION] = {NULL, conditional, PREC_CONDITIONAL},
+  [TOKEN_COLON]    = {NULL, NULL,        PREC_NONE}
 };
 //< Compiling Expressions rules
 //> Compiling Expressions parse-precedence

@@ -22,7 +22,10 @@ typedef enum {
   TOKEN_PRINT, TOKEN_RETURN, TOKEN_SUPER, TOKEN_THIS,
   TOKEN_TRUE, TOKEN_VAR, TOKEN_WHILE,
 
-  TOKEN_ERROR, TOKEN_EOF
+  TOKEN_ERROR, TOKEN_EOF,
+
+  // Chapter 17 Question 3: Added Two Tokens
+  TOKEN_QUESTION, TOKEN_COLON
 } TokenType;
 //< token-type
 //> token-struct
