@@ -448,17 +448,34 @@ static void concatenate() {
   // Allocate the ObjString first using the new MakeString
   // Write directly into its trailing chars buffer with the two memcpy calls after
   static void concatenate() {
-  ObjString* b = AS_STRING(pop());
-  ObjString* a = AS_STRING(pop());
+    ObjString* b = AS_STRING(pop());
+    ObjString* a = AS_STRING(pop());
 
-  int length = a->length + b->length;
-  ObjString* result = makeString(length);
-  memcpy(result->chars, a->chars, a->length);
-  memcpy(result->chars + a->length, b->chars, b->length);
-  result->chars[length] = '\0';
+    int length = a->length + b->length;
+    ObjString* result = makeString(length);
+    memcpy(result->chars, a->chars, a->length);
+    memcpy(result->chars + a->length, b->chars, b->length);
+   result->chars[length] = '\0';
 
-  push(OBJ_VAL(result));
-}
+    push(OBJ_VAL(result));
+  }
+*/
+
+/* Chapter 19 Question 2: Replace other concatenate() with:
+  static void concatenate() {
+    ObjString* b = AS_STRING(pop());
+    ObjString* a = AS_STRING(pop());
+
+    int length = a->length + b->length;
+    char* chars = ALLOCATE(char, length + 1);
+    memcpy(chars, a->chars, a->length);
+    memcpy(chars + a->length, b->chars, b->length);
+    chars[length] = '\0';
+
+    ObjString* result = makeString(true, chars, length);
+    push(OBJ_VAL(result));
+  }
+
 */
 //> run
 static InterpretResult run() {

@@ -201,7 +201,17 @@ ObjString* copyString(const char* chars, int length) {
     string->chars[length] = '\0';
 
     return string;
-}
+  }
+*/
+
+/* Chapter 19 Question 2: Replace takeString() AND copyString() with:
+  ObjString* makeString(bool ownsChars, char* chars, int length) {
+    ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
+    string->ownsChars = ownsChars;
+    string->length = length;
+    string->chars = chars;
+    return string;
+  }
 */
 
 //> Closures new-upvalue
@@ -265,6 +275,12 @@ void printObject(Value value) {
     case OBJ_STRING:
       printf("%s", AS_CSTRING(value));
       break;
+      /* Chapter 19 Question 2: Update case OBJ_STRING: body to:
+        // Was: printf("%s", AS_CSTRING(value));
+        // Now: use length-bounded print since chars may not be null-terminated
+        printf("%.*s", AS_STRING(value)->length, AS_CSTRING(value));
+        break;
+      */
 //> Closures print-upvalue
     case OBJ_UPVALUE:
       printf("upvalue");

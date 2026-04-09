@@ -130,6 +130,8 @@ struct ObjString {
   // Chapter 19: Question 1: Type Change
   // Would Change char* chars; --> char chars[];
       // char chars[];
+  // Chapter 19: Question 2: Does this string own its char array?
+      // add: bool ownsChars;
 };
 //< obj-string
 //> Closures obj-upvalue
@@ -202,6 +204,9 @@ ObjNative* newNative(NativeFn function);
 //< Calls and Functions new-native-h
 //> take-string-h
 ObjString* takeString(char* chars, int length);
+/* Chapter 19 Question 2: Replace takeString() declaration and replace with:
+      ObjString* makeString(bool ownsChars, char* chars, int length);
+*/
 //< take-string-h
 //> copy-string-h
 ObjString* copyString(const char* chars, int length);

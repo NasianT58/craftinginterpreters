@@ -723,6 +723,17 @@ static void string(bool canAssign) {
                                   parser.previous.length - 2)));
 }
 //< Strings parse-string
+
+/* Chapter 19 Question 2: Update string() function to: Characters point directly into source code string
+  static void string() {
+    emitConstant(OBJ_VAL(makeString(false,
+    ( char*)parser.previous.start + 1,
+      parser.previous.length - 2)));
+  }
+*/
+
+
+
 /* Global Variables read-named-variable < Global Variables named-variable-signature
 static void namedVariable(Token name) {
 */

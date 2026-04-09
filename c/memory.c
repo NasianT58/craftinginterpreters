@@ -231,6 +231,16 @@ static void freeObject(Obj* object) {
           reallocate(object, sizeof(ObjString) + string->length + 1, 0);
           break;
         */
+
+      // Chapter 19 Question 2: Replace body of original/function with:
+        /*
+          ObjString* string = (ObjString*)object;
+          if (string->ownsChars) {
+            FREE_ARRAY(char, (char*)string->chars, string->length + 1);
+          }
+          FREE(ObjString, object);
+          break;
+        */
     }
 //> Closures free-upvalue
     case OBJ_UPVALUE:
