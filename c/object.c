@@ -161,6 +161,16 @@ ObjString* takeString(char* chars, int length) {
   return allocateString(chars, length, hash);
 //< Hash Tables take-string-hash
 }
+
+/* Chapter 19 Question 1: Replace "takeString()" with "makeString()"
+ObjString* makeString(int length) {
+  ObjString* string = (ObjString*)allocateObject(
+      sizeof(ObjString) + length + 1, OBJ_STRING);
+  string->length = length;
+  return string;
+}
+
+*/
 //< take-string
 ObjString* copyString(const char* chars, int length) {
 //> Hash Tables copy-string-hash
@@ -182,6 +192,18 @@ ObjString* copyString(const char* chars, int length) {
   return allocateString(heapChars, length, hash);
 //< Hash Tables copy-string-allocate
 }
+
+/* Chapter 19 Question 1: Replace copyString() with this version:
+  ObjString* copyString(const char* chars, int length) {
+    ObjString* string = makeString(length);
+
+    memcpy(string->chars, chars, length);
+    string->chars[length] = '\0';
+
+    return string;
+}
+*/
+
 //> Closures new-upvalue
 ObjUpvalue* newUpvalue(Value* slot) {
   ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);

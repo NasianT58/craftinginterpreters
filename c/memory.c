@@ -220,6 +220,17 @@ static void freeObject(Obj* object) {
       FREE_ARRAY(char, string->chars, string->length + 1);
       FREE(ObjString, object);
       break;
+
+      // Chapter 19 Question 1: Replace the body of original function with:
+        /*
+          ObjString* string = (ObjString*)object;
+          // Was two calls:
+          //   FREE_ARRAY(char, string->chars, string->length + 1);
+          //   FREE(ObjString, object);
+          // Now one call covers the whole allocation:
+          reallocate(object, sizeof(ObjString) + string->length + 1, 0);
+          break;
+        */
     }
 //> Closures free-upvalue
     case OBJ_UPVALUE:

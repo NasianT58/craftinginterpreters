@@ -127,6 +127,9 @@ struct ObjString {
 //> Hash Tables obj-string-hash
   uint32_t hash;
 //< Hash Tables obj-string-hash
+  // Chapter 19: Question 1: Type Change
+  // Would Change char* chars; --> char chars[];
+      // char chars[];
 };
 //< obj-string
 //> Closures obj-upvalue
