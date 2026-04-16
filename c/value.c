@@ -65,6 +65,8 @@ void printValue(Value value) {
 //> Strings call-print-object
     case VAL_OBJ: printObject(value); break;
 //< Strings call-print-object
+// Chapter 20 Question 1: Add VAL_EMPTY case to printValue
+    case VAL_EMPTY: printf("<empty>"); break;
   }
 //< Types of Values print-value
 //> Optimization end-print-value
@@ -101,6 +103,8 @@ bool valuesEqual(Value a, Value b) {
 //> Hash Tables equal
     case VAL_OBJ:    return AS_OBJ(a) == AS_OBJ(b);
 //< Hash Tables equal
+// Chapter 20 Question 1: add VAL_EMPTY case to valuesEqual
+    case VAL_EMPTY: return true;
     default:         return false; // Unreachable.
   }
 //> Optimization end-values-equal
@@ -108,3 +112,25 @@ bool valuesEqual(Value a, Value b) {
 //< Optimization end-values-equal
 }
 //< Types of Values values-equal
+
+// Chapter 20 Question 1: Add Hashing Functions
+static uint32_t hashDouble(double value) {
+  union BitCast {
+    double value;
+    uint32_t ints[2];
+  };
+
+  union BitCast cast;
+  cast.value = (value) + 1.0;
+  return cast.ints[0] + cast.ints[1];
+}
+
+uint32_t hashValue(Value value) {
+  switch (value.type) {
+    case VAL_BOOL:   return AS_BOOL(value) ? 3 : 5;
+    case VAL_NIL:    return 7;
+    case VAL_NUMBER: return hashDouble(AS_NUMBER(value));
+    case VAL_OBJ:    return AS_STRING(value)->hash;
+    case VAL_EMPTY:  return 0;
+  }
+}

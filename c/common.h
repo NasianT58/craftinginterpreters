@@ -8,7 +8,8 @@
 //> A Virtual Machine define-debug-trace
 
 //> Optimization define-nan-boxing
-#define NAN_BOXING
+// Chapter 20 Question 1: Disable NAN_BOXING since we are using the repository forked
+// #define NAN_BOXING
 //< Optimization define-nan-boxing
 //> Compiling Expressions define-debug-print-code
 #define DEBUG_PRINT_CODE

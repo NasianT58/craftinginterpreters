@@ -27,13 +27,15 @@ void freeTable(Table* table) {
 // NOTE: The "Optimization" chapter has a manual copy of this function.
 // If you change it here, make sure to update that copy.
 //< omit
+
+// Chapter 20 Question 1: Modify findEntry function
 static Entry* findEntry(Entry* entries, int capacity,
-                        ObjString* key) {
+                        Value key) { // was: Entry* entries, int capacity, ObjString* key
 /* Hash Tables find-entry < Optimization initial-index
   uint32_t index = key->hash % capacity;
 */
 //> Optimization initial-index
-  uint32_t index = key->hash & (capacity - 1);
+  uint32_t index = hashValue(key) & (capacity - 1); // was key->hash % capacity
 //< Optimization initial-index
 //> find-entry-tombstone
   Entry* tombstone = NULL;
@@ -47,7 +49,7 @@ static Entry* findEntry(Entry* entries, int capacity,
     }
 */
 //> find-tombstone
-    if (entry->key == NULL) {
+    if (IS_EMPTY(entry->key)) { // was: entry->key == NULL
       if (IS_NIL(entry->value)) {
         // Empty entry.
         return tombstone != NULL ? tombstone : entry;
@@ -55,7 +57,7 @@ static Entry* findEntry(Entry* entries, int capacity,
         // We found a tombstone.
         if (tombstone == NULL) tombstone = entry;
       }
-    } else if (entry->key == key) {
+    } else if (valuesEqual(key, entry->key)) { // was: entry-> key == key
       // We found the key.
       return entry;
     }
@@ -71,21 +73,23 @@ static Entry* findEntry(Entry* entries, int capacity,
 }
 //< find-entry
 //> table-get
-bool tableGet(Table* table, ObjString* key, Value* value) {
+// Chapter 20 Question 1: Update tableGet method
+bool tableGet(Table* table, Value key, Value* value) { // was: Table* table, ObjString* key, Value* value
   if (table->count == 0) return false;
 
   Entry* entry = findEntry(table->entries, table->capacity, key);
-  if (entry->key == NULL) return false;
+  if (IS_EMPTY(entry->key) == NULL) return false; // was: entry->key == NULL
 
   *value = entry->value;
   return true;
 }
 //< table-get
 //> table-adjust-capacity
+// Chapter 20 Question 1: Update adjustCapacity method
 static void adjustCapacity(Table* table, int capacity) {
   Entry* entries = ALLOCATE(Entry, capacity);
   for (int i = 0; i < capacity; i++) {
-    entries[i].key = NULL;
+    entries[i].key = EMPTY_VAL; // was: NULL
     entries[i].value = NIL_VAL;
   }
 //> re-hash
@@ -95,7 +99,7 @@ static void adjustCapacity(Table* table, int capacity) {
 //< resize-init-count
   for (int i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
-    if (entry->key == NULL) continue;
+    if (IS_EMPTY(entry->key) == NULL) continue; // was: entry->key == NULL
 
     Entry* dest = findEntry(entries, capacity, entry->key);
     dest->key = entry->key;
@@ -114,7 +118,8 @@ static void adjustCapacity(Table* table, int capacity) {
 }
 //< table-adjust-capacity
 //> table-set
-bool tableSet(Table* table, ObjString* key, Value value) {
+// Chapter 20 Question 1: Update tableSet method
+bool tableSet(Table* table, Value key, Value value) { // was: Table* table, ObjString* key, Value value
 //> table-set-grow
   if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
     int capacity = GROW_CAPACITY(table->capacity);
@@ -123,7 +128,7 @@ bool tableSet(Table* table, ObjString* key, Value value) {
 
 //< table-set-grow
   Entry* entry = findEntry(table->entries, table->capacity, key);
-  bool isNewKey = entry->key == NULL;
+  bool isNewKey = IS_EMPTY(entry->key); // was: entry->key == NULL
 /* Hash Tables table-set < Hash Tables set-increment-count
   if (isNewKey) table->count++;
 */
@@ -137,15 +142,16 @@ bool tableSet(Table* table, ObjString* key, Value value) {
 }
 //< table-set
 //> table-delete
-bool tableDelete(Table* table, ObjString* key) {
+// Chapter 20 Question 1: Update tableDelete method
+bool tableDelete(Table* table, Value key) { // was: Table* table, ObjString* key
   if (table->count == 0) return false;
 
   // Find the entry.
   Entry* entry = findEntry(table->entries, table->capacity, key);
-  if (entry->key == NULL) return false;
+  if (IS_EMPTY(entry->key)) return false; // was: entry->key == NULL
 
   // Place a tombstone in the entry.
-  entry->key = NULL;
+  entry->key = EMPTY_VAL; // was: NULL
   entry->value = BOOL_VAL(true);
   return true;
 }
@@ -154,13 +160,14 @@ bool tableDelete(Table* table, ObjString* key) {
 void tableAddAll(Table* from, Table* to) {
   for (int i = 0; i < from->capacity; i++) {
     Entry* entry = &from->entries[i];
-    if (entry->key != NULL) {
+    if (!IS_EMPTY(entry->key)) { // was: entry->key != NULL
       tableSet(to, entry->key, entry->value);
     }
   }
 }
 //< table-add-all
 //> table-find-string
+// Chapter 20 Question 1: Update tableFindString method
 ObjString* tableFindString(Table* table, const char* chars,
                            int length, uint32_t hash) {
   if (table->count == 0) return NULL;
@@ -173,6 +180,7 @@ ObjString* tableFindString(Table* table, const char* chars,
 //< Optimization find-string-index
   for (;;) {
     Entry* entry = &table->entries[index];
+    /* 
     if (entry->key == NULL) {
       // Stop if we find an empty non-tombstone entry.
       if (IS_NIL(entry->value)) return NULL;
@@ -181,7 +189,17 @@ ObjString* tableFindString(Table* table, const char* chars,
         memcmp(entry->key->chars, chars, length) == 0) {
       // We found it.
       return entry->key;
+    } */
+
+    if (IS_EMPTY(entry->key)) return NULL;  // was: entry->key == NULL
+
+    ObjString* string = AS_STRING(entry->key);  // unwrap Value to ObjString*
+    if (string->length == length &&
+        memcmp(string->chars, chars, length) == 0) {
+      return string;
     }
+
+    index = (index + 1) % table->capacity;
 
 /* Hash Tables table-find-string < Optimization find-string-next
     index = (index + 1) % table->capacity;
@@ -193,21 +211,37 @@ ObjString* tableFindString(Table* table, const char* chars,
 }
 //< table-find-string
 //> Garbage Collection table-remove-white
+// Chapter 20 Question 1: Update tableRemoveWhite method
 void tableRemoveWhite(Table* table) {
   for (int i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
+
+    /* 
     if (entry->key != NULL && !entry->key->obj.isMarked) {
+      tableDelete(table, entry->key);
+    } */
+
+    if (!IS_EMPTY(entry->key) &&
+        IS_OBJ(entry->key) &&
+        !AS_OBJ(entry->key)->isMarked) {
       tableDelete(table, entry->key);
     }
   }
 }
 //< Garbage Collection table-remove-white
 //> Garbage Collection mark-table
+// Chapter 20 Question 1: Update markTable method
 void markTable(Table* table) {
   for (int i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
+    /*
     markObject((Obj*)entry->key);
-    markValue(entry->value);
+    markValue(entry->value); */
+
+    if (!IS_EMPTY(entry->key)) {
+      markValue(entry->key);
+      markValue(entry->value);
+    }
   }
 }
 //< Garbage Collection mark-table

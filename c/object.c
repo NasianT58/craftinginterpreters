@@ -109,6 +109,7 @@ static ObjString* allocateString(char* chars, int length) {
 */
 //> allocate-string
 //> Hash Tables allocate-string
+// Chapter 20 Question 1: update allocateString
 static ObjString* allocateString(char* chars, int length,
                                  uint32_t hash) {
 //< Hash Tables allocate-string
@@ -123,7 +124,7 @@ static ObjString* allocateString(char* chars, int length,
 
   push(OBJ_VAL(string));
 //< Garbage Collection push-string
-  tableSet(&vm.strings, string, NIL_VAL);
+  tableSet(&vm.strings, OBJ_VAL(string), NIL_VAL); // was: &vm.strings, string, NIL_VAL
 //> Garbage Collection pop-string
   pop();
 

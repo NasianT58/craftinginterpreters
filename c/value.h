@@ -101,8 +101,10 @@ typedef enum {
   VAL_NIL, // [user-types]
   VAL_NUMBER,
 //> Strings val-obj
-  VAL_OBJ
+  VAL_OBJ,
 //< Strings val-obj
+  // Chapter 20 Question 1: Add VAL_EMPTY
+  VAL_EMPTY
 } ValueType;
 
 //< Types of Values value-type
@@ -149,6 +151,11 @@ typedef struct {
 //< Types of Values value-macros
 //> Optimization end-if-nan-boxing
 
+// Chapter 20 Question 1: Define IS_EMPTY and EMPTY_VAL macros
+#define IS_EMPTY(value) ((value).type == VAL_EMPTY)
+
+#define EMPTY_VAL ((Value){ VAL_EMPTY, { .number = 0 } })
+
 #endif
 //< Optimization end-if-nan-boxing
 //> value-array
@@ -171,5 +178,9 @@ void freeValueArray(ValueArray* array);
 //> print-value-h
 void printValue(Value value);
 //< print-value-h
+
+// Chapter 20 Question 1: Add uint32_t function declaration
+uint32_t hashValue(Value value);
+
 
 #endif
