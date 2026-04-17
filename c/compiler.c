@@ -141,6 +141,8 @@ static Chunk* currentChunk() {
   return compilingChunk;
 }
 */
+// Chapter 21 Question 1: Add global variable stringConstants
+Table stringConstants;
 //> Calls and Functions current-chunk
 
 static Chunk* currentChunk() {
@@ -414,10 +416,29 @@ static void conditional(bool canAssign);
 
 //< Compiling Expressions forward-declarations
 //> Global Variables identifier-constant
+
+/* Old Function
 static uint8_t identifierConstant(Token* name) {
   return makeConstant(OBJ_VAL(copyString(name->start,
                                          name->length)));
+}  */
+
+// Chapter 21 Question 1: replace the identifierConstant function
+static uint8_t identifierConstant(Token* name) {
+  // See if we already have
+  ObjString* string = copyString(name->start, name->length);
+  Value indexValue;
+  if (tableGet(&stringConstants, OBJ_VAL(string), &indexValue)) {
+    // If we do
+    return (uint8_t)AS_NUMBER(indexValue);
+  }
+
+  uint8_t index = makeConstant(OBJ_VAL(string));
+  tableSet(&stringConstants, OBJ_VAL(string), NUMBER_VAL((double)index));
+  return index;
 }
+
+
 //< Global Variables identifier-constant
 //> Local Variables identifiers-equal
 static bool identifiersEqual(Token* a, Token* b) {
@@ -1477,6 +1498,8 @@ void compile(const char* source) {
 /* Compiling Expressions compile-signature < Calls and Functions compile-signature
 bool compile(const char* source, Chunk* chunk) {
 */
+
+
 //> Calls and Functions compile-signature
 ObjFunction* compile(const char* source) {
 //< Calls and Functions compile-signature
@@ -1513,6 +1536,8 @@ ObjFunction* compile(const char* source) {
 
   parser.hadError = false;
   parser.panicMode = false;
+  // Chapter 21 Question 1:
+  initTable(&stringConstants); // added, initalizes hash table
 
 //< init-parser-error
   advance();
@@ -1536,6 +1561,8 @@ ObjFunction* compile(const char* source) {
 */
 //> Calls and Functions call-end-compiler
   ObjFunction* function = endCompiler();
+  // Chapter 21 Question 1:
+  freeTable(&stringConstants); // added, deallocates the memory hash table was using
   return parser.hadError ? NULL : function;
 //< Calls and Functions call-end-compiler
 }
