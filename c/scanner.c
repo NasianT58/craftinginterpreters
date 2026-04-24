@@ -158,7 +158,21 @@ static TokenType identifierType() {
       }
       break;
 //< keyword-t
-    case 'v': return checkKeyword(1, 2, "ar", TOKEN_VAR);
+    case 'v':
+      // return checkKeyword(1, 2, "ar", TOKEN_VAR);
+      // Chapter 22 Question 3: Make scanner recognize TOKEN_CONST
+      if (scanner.current - scanner.start > 1) {
+        switch (scanner.start[1]) {
+          case 'a':
+          if (scanner.current - scanner.start > 2) {
+            switch (scanner.start[2]) {
+              case 'r': return checkKeyword(3, 0, "", TOKEN_VAR);
+              case 'l': return checkKeyword(3, 0, "", TOKEN_VAL);
+            }
+          }
+        }
+  }
+  return TOKEN_IDENTIFIER;
     case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
   }
 

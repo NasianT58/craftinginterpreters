@@ -25,7 +25,10 @@ typedef enum {
   TOKEN_ERROR, TOKEN_EOF,
 
   // Chapter 17 Question 3: Added Two Tokens
-  TOKEN_QUESTION, TOKEN_COLON
+  TOKEN_QUESTION, TOKEN_COLON,
+
+  // Chapter 22 Question 3: Added One Token
+  TOKEN_VAL
 } TokenType;
 //< token-type
 //> token-struct

@@ -73,6 +73,8 @@ typedef struct {
 //> Closures is-captured-field
   bool isCaptured;
 //< Closures is-captured-field
+  // Chapter 22 Question 3: Added bool isConst;
+  bool isConst;
 } Local;
 //< Local Variables local-struct
 //> Closures upvalue-struct
@@ -323,6 +325,8 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
   local->depth = 0;
 //> Closures init-zero-local-is-captured
   local->isCaptured = false;
+  // Chapter 22 Question 3: Add isConst
+  local->isConst = false;
 //< Closures init-zero-local-is-captured
 /* Calls and Functions init-function-slot < Methods and Initializers slot-zero
   local->name.start = "";
@@ -413,6 +417,8 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 // Chapter 17 Challenge  3
 static void conditional(bool canAssign);
+// Chapter 22 Question 3:
+static bool isConstGlobal(Token* name);
 
 //< Compiling Expressions forward-declarations
 //> Global Variables identifier-constant
@@ -512,7 +518,8 @@ static int resolveUpvalue(Compiler* compiler, Token* name) {
 }
 //< Closures resolve-upvalue
 //> Local Variables add-local
-static void addLocal(Token name) {
+// Chapter 22 Question 3: Added isConst parameter
+static void addLocal(Token name, bool isConst) {
 //> too-many-locals
   if (current->localCount == UINT8_COUNT) {
     error("Too many local variables in function.");
@@ -530,11 +537,14 @@ static void addLocal(Token name) {
 //< declare-undefined
 //> Closures init-is-captured
   local->isCaptured = false;
+  // Chapter 22 Question 3: adding isConst
+  local->isConst = isConst;
 //< Closures init-is-captured
 }
 //< Local Variables add-local
 //> Local Variables declare-variable
-static void declareVariable() {
+// Chapter 22 Question 3: Added isConst parameter
+static void declareVariable(bool isConst) {
   if (current->scopeDepth == 0) return;
 
   Token* name = &parser.previous;
@@ -551,15 +561,17 @@ static void declareVariable() {
   }
 
 //< existing-in-scope
-  addLocal(*name);
+  // Changed addLocal's call adding isConst
+  addLocal(*name, isConst);
 }
 //< Local Variables declare-variable
 //> Global Variables parse-variable
-static uint8_t parseVariable(const char* errorMessage) {
+// Chapter 22 Question 3: Added isConst parameter
+static uint8_t parseVariable(const char* errorMessage, bool isConst) {
   consume(TOKEN_IDENTIFIER, errorMessage);
 //> Local Variables parse-local
 
-  declareVariable();
+  declareVariable(isConst);
   if (current->scopeDepth > 0) return 0;
 
 //< Local Variables parse-local
@@ -791,25 +803,42 @@ static void namedVariable(Token name, bool canAssign) {
   if (match(TOKEN_EQUAL)) {
 */
 //> named-variable-can-assign
+
+// Chapter 22 Question 3: update namedVariable block
   if (canAssign && match(TOKEN_EQUAL)) {
-//< named-variable-can-assign
+    if (arg != -1) {
+      // It's a local variable — check isConst
+      if (current->locals[arg].isConst) {
+        error("Can't assign to const variable.");
+        expression();
+        return;
+      }
+    } else {
+      // It's a global — check constGlobals table if implemented
+      if (isConstGlobal(&name)) {
+        error("Can't assign to const variable.");
+        expression();
+        return;
+      }
+    }
     expression();
-/* Global Variables named-variable < Local Variables emit-set
-    emitBytes(OP_SET_GLOBAL, arg);
-*/
-//> Local Variables emit-set
     emitBytes(setOp, (uint8_t)arg);
-//< Local Variables emit-set
   } else {
-/* Global Variables named-variable < Local Variables emit-get
-    emitBytes(OP_GET_GLOBAL, arg);
-*/
-//> Local Variables emit-get
     emitBytes(getOp, (uint8_t)arg);
-//< Local Variables emit-get
   }
 //< named-variable
 }
+
+// Chapter 22 Question 3: Add isConstGlobal helper
+static bool isConstGlobal(Token* name) {
+  // Walk all locals at scope depth 0 — not possible for globals.
+  // For globals we can't track isConst at runtime without a table.
+  // Simplest approach: always allow global val reassignment to be
+  // caught only for locals. See note below.
+  return false;
+}
+
+
 //< Global Variables read-named-variable
 /* Global Variables variable-without-assign < Global Variables variable
 static void variable() {
@@ -1015,6 +1044,8 @@ ParseRule rules[] = {
   [TOKEN_TRUE]          = {literal,  NULL,   PREC_NONE},
 //< Types of Values table-true
   [TOKEN_VAR]           = {NULL,     NULL,   PREC_NONE},
+  // Chapter 22 Question 3: Add TOKEN_VAL to Rule Table
+  [TOKEN_VAL]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_WHILE]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
@@ -1103,7 +1134,8 @@ static void function(FunctionType type) {
       if (current->function->arity > 255) {
         errorAtCurrent("Can't have more than 255 parameters.");
       }
-      uint8_t constant = parseVariable("Expect parameter name.");
+      // Chapter 22 Question 3: Change parseVariable call
+      uint8_t constant = parseVariable("Expect parameter name.", false);
       defineVariable(constant);
     } while (match(TOKEN_COMMA));
   }
@@ -1161,7 +1193,8 @@ static void classDeclaration() {
   Token className = parser.previous;
 //< Methods and Initializers class-name
   uint8_t nameConstant = identifierConstant(&parser.previous);
-  declareVariable();
+  // Chapter 22 Question 3: Change declareVariable call
+  declareVariable(false);
 
   emitBytes(OP_CLASS, nameConstant);
   defineVariable(nameConstant);
@@ -1188,7 +1221,8 @@ static void classDeclaration() {
 //< inherit-self
 //> superclass-variable
     beginScope();
-    addLocal(syntheticToken("super"));
+    // Chapter 22 Question 3: Change addLocal call
+    addLocal(syntheticToken("super"), false);
     defineVariable(0);
     
 //< superclass-variable
@@ -1227,7 +1261,8 @@ static void classDeclaration() {
 //< Classes and Instances class-declaration
 //> Calls and Functions fun-declaration
 static void funDeclaration() {
-  uint8_t global = parseVariable("Expect function name.");
+  // Chapter 22 Question 3: Change parseVariable call
+  uint8_t global = parseVariable("Expect function name.", false);
   markInitialized();
   function(TYPE_FUNCTION);
   defineVariable(global);
@@ -1235,7 +1270,8 @@ static void funDeclaration() {
 //< Calls and Functions fun-declaration
 //> Global Variables var-declaration
 static void varDeclaration() {
-  uint8_t global = parseVariable("Expect variable name.");
+  // Chapter 22 Question 3: Change parseVariable call
+  uint8_t global = parseVariable("Expect variable name.", false);
 
   if (match(TOKEN_EQUAL)) {
     expression();
@@ -1247,6 +1283,22 @@ static void varDeclaration() {
 
   defineVariable(global);
 }
+
+// Chapter 22 Question 3: Add valDeclaration:
+static void valDeclaration() {
+  uint8_t global = parseVariable("Expect variable name.", true);
+
+  if (match(TOKEN_EQUAL)) {
+    expression();
+  } else {
+    error("Const variables must be initialized.");
+    emitByte(OP_NIL);
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+
+  defineVariable(global);
+}
+
 //< Global Variables var-declaration
 //> Global Variables expression-statement
 static void expressionStatement() {
@@ -1411,6 +1463,8 @@ static void synchronize() {
       case TOKEN_CLASS:
       case TOKEN_FUN:
       case TOKEN_VAR:
+      // Chapter 22 Question 3: Add TOKEN_VAL case
+      case TOKEN_VAL:
       case TOKEN_FOR:
       case TOKEN_IF:
       case TOKEN_WHILE:
@@ -1445,9 +1499,11 @@ static void declaration() {
 //< Calls and Functions match-fun
 //> match-var
     varDeclaration();
+  // Chapter 22 Question 3: Update declaration()
+  } else if (match(TOKEN_VAL)) {
+    valDeclaration();
   } else {
     statement();
-  }
 //< match-var
 /* Global Variables declaration < Global Variables match-var
   statement();
@@ -1456,6 +1512,7 @@ static void declaration() {
 
   if (parser.panicMode) synchronize();
 //< call-synchronize
+  }
 }
 //< Global Variables declaration
 //> Global Variables statement
