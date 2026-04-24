@@ -104,8 +104,10 @@ typedef enum {
   OP_INHERIT,
 //< Superclasses inherit-op
 //> Methods and Initializers method-op
-  OP_METHOD
+  OP_METHOD,
 //< Methods and Initializers method-op
+// Chapter 23 Question 1: Add OP_DUP
+  OP_DUP
 } OpCode;
 //< op-enum
 //> chunk-struct

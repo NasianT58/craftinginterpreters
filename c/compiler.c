@@ -23,6 +23,9 @@
 
 // Chapter 22 Question 4:
 #define LOCALS_MAX 65536
+// Chapter 23 Question 1:
+
+#define MAX_CASES 256
 
 typedef struct {
   Token current;
@@ -1468,6 +1471,77 @@ static void returnStatement() {
     emitByte(OP_RETURN);
   }
 }
+
+// Chapter 23 Question 1: add switchStatement()
+static void switchStatement() {
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after value.");
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before switch cases.");
+
+  int state = 0; // 0: before all cases, 1: before default, 2: after default.
+  int caseEnds[MAX_CASES];
+  int caseCount = 0;
+  int previousCaseSkip = -1;
+
+  while (!match(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    if (match(TOKEN_CASE) || match(TOKEN_DEFAULT)) {
+      TokenType caseType = parser.previous.type;
+
+      if (state == 2) {
+        error("Can't have another case or default after the default case.");
+      }
+
+      if (state == 1) {
+        // At the end of the previous case, jump over the others.
+        caseEnds[caseCount++] = emitJump(OP_JUMP);
+
+        // Patch its condition to jump to the next case (this one).
+        patchJump(previousCaseSkip);
+        emitByte(OP_POP);
+      }
+
+      if (caseType == TOKEN_CASE) {
+        state = 1;
+
+        // See if the case is equal to the value.
+        emitByte(OP_DUP);
+        expression();
+
+        consume(TOKEN_COLON, "Expect ':' after case value.");
+
+        emitByte(OP_EQUAL);
+        previousCaseSkip = emitJump(OP_JUMP_IF_FALSE);
+
+        // Pop the comparison result.
+        emitByte(OP_POP);
+      } else {
+        state = 2;
+        consume(TOKEN_COLON, "Expect ':' after default.");
+        previousCaseSkip = -1;
+      }
+    } else {
+      // Otherwise, it's a statement inside the current case.
+      if (state == 0) {
+        error("Can't have statements before any case.");
+      }
+      statement();
+    }
+  }
+
+  // If we ended without a default case, patch its condition jump.
+  if (state == 1) {
+    patchJump(previousCaseSkip);
+    emitByte(OP_POP);
+  }
+
+  // Patch all the case jumps to the end.
+  for (int i = 0; i < caseCount; i++) {
+    patchJump(caseEnds[i]);
+  }
+
+  emitByte(OP_POP); // The switch value.
+}
 //< Calls and Functions return-statement
 //> Jumping Back and Forth while-statement
 static void whileStatement() {
@@ -1562,6 +1636,9 @@ static void statement() {
 //> Jumping Back and Forth parse-if
   } else if (match(TOKEN_IF)) {
     ifStatement();
+// Chapter 23 Question 1: updated statement()
+  } else if (match(TOKEN_SWITCH)) {
+    switchStatement();
 //< Jumping Back and Forth parse-if
 //> Calls and Functions match-return
   } else if (match(TOKEN_RETURN)) {

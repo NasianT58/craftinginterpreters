@@ -21,5 +21,7 @@ ObjFunction* compile(const char* source);
 //> Garbage Collection mark-compiler-roots-h
 void markCompilerRoots();
 //< Garbage Collection mark-compiler-roots-h
+// Chapter 23 Question 1: Add function declaration
+static void switchStatement(void);
 
 #endif
