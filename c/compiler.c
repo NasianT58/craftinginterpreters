@@ -21,6 +21,9 @@
 //< Compiling Expressions include-debug
 //> Compiling Expressions parser
 
+// Chapter 22 Question 4:
+#define LOCALS_MAX 65536
+
 typedef struct {
   Token current;
   Token previous;
@@ -109,7 +112,9 @@ typedef struct Compiler {
   FunctionType type;
 
 //< Calls and Functions function-fields
-  Local locals[UINT8_COUNT];
+  // Local locals[UINT8_COUNT];
+  // Chapter 22 Question 4 Change Local:
+  Local locals[LOCALS_MAX];
   int localCount;
 //> Closures upvalues-array
   Upvalue upvalues[UINT8_COUNT];
@@ -230,6 +235,24 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
   emitByte(byte1);
   emitByte(byte2);
 }
+
+static void emitShort(uint16_t value) {
+  emitByte((value >> 8) & 0xff);
+  emitByte(value & 0xff);
+}
+
+// Chapter 22 Question 4: Add Helper Function
+static void emitLocalInstruction(uint8_t shortOp, uint8_t longOp, int slot) {
+  if (slot <= UINT8_MAX) {
+    emitBytes(shortOp, (uint8_t)slot);
+  } else if (slot <= UINT16_MAX) {
+    emitByte(longOp);
+    emitShort((uint16_t)slot);
+  } else {
+    error("Too many local variables in function.");
+  }
+}
+
 //< Compiling Expressions emit-bytes
 //> Jumping Back and Forth emit-loop
 static void emitLoop(int loopStart) {
@@ -521,7 +544,8 @@ static int resolveUpvalue(Compiler* compiler, Token* name) {
 // Chapter 22 Question 3: Added isConst parameter
 static void addLocal(Token name, bool isConst) {
 //> too-many-locals
-  if (current->localCount == UINT8_COUNT) {
+// Chapter 22 Question 4: update to LOCALS_MAX
+  if (current->localCount == LOCALS_MAX) {
     error("Too many local variables in function.");
     return;
   }
@@ -805,27 +829,39 @@ static void namedVariable(Token name, bool canAssign) {
 //> named-variable-can-assign
 
 // Chapter 22 Question 3: update namedVariable block
+// Chapter 22 Question 4: update namedVariable block (again)
   if (canAssign && match(TOKEN_EQUAL)) {
-    if (arg != -1) {
-      // It's a local variable — check isConst
-      if (current->locals[arg].isConst) {
-        error("Can't assign to const variable.");
-        expression();
-        return;
-      }
-    } else {
-      // It's a global — check constGlobals table if implemented
-      if (isConstGlobal(&name)) {
-        error("Can't assign to const variable.");
-        expression();
-        return;
-      }
+  if (arg != -1) {
+    if (current->locals[arg].isConst) {
+      error("Can't assign to const variable.");
+      expression();
+      return;
     }
-    expression();
+  } else {
+    if (isConstGlobal(&name)) {
+      error("Can't assign to const variable.");
+      expression();
+      return;
+    }
+  }
+
+  expression();
+
+  if (getOp == OP_GET_LOCAL) {
+    emitLocalInstruction(OP_SET_LOCAL, OP_SET_LOCAL_LONG, arg);
+  } else {
     emitBytes(setOp, (uint8_t)arg);
+  }
+
+} else {
+
+  if (getOp == OP_GET_LOCAL) {
+    emitLocalInstruction(OP_GET_LOCAL, OP_GET_LOCAL_LONG, arg);
   } else {
     emitBytes(getOp, (uint8_t)arg);
   }
+
+}
 //< named-variable
 }
 

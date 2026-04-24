@@ -490,6 +490,10 @@ static InterpretResult run() {
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 */
 
+// Chapter 22 Question 4: Add macro
+#define READ_SLOT_LONG() \
+  (uint16_t)((READ_BYTE() << 8) | READ_BYTE())
+
 /* Jumping Back and Forth read-short < Calls and Functions run
 #define READ_SHORT() \
     (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
@@ -601,6 +605,12 @@ static InterpretResult run() {
 //< Calls and Functions push-local
         break;
       }
+      // Chapter 22 Question 4: add OP_GET_LOCAL_LONG case
+      case OP_GET_LOCAL_LONG: {
+        uint16_t slot = READ_SLOT_LONG();
+        push(frame->slots[slot]);
+        break;
+      }
 //< Local Variables interpret-get-local
 //> Local Variables interpret-set-local
       case OP_SET_LOCAL: {
@@ -611,6 +621,12 @@ static InterpretResult run() {
 //> Calls and Functions set-local
         frame->slots[slot] = peek(0);
 //< Calls and Functions set-local
+        break;
+      }
+      // Chapter 22 Question 4: add OP_SET_LOCAL_LONG case
+      case OP_SET_LOCAL_LONG: {
+        uint16_t slot = READ_SLOT_LONG();
+        frame->slots[slot] = peek(0);
         break;
       }
 //< Local Variables interpret-set-local

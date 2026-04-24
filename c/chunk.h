@@ -24,9 +24,13 @@ typedef enum {
 //< Global Variables pop-op
 //> Local Variables get-local-op
   OP_GET_LOCAL,
+// Chapter 22 Question 4: Add new opcodes
+  OP_GET_LOCAL_LONG,
 //< Local Variables get-local-op
 //> Local Variables set-local-op
   OP_SET_LOCAL,
+// Chapter 22 Question 4: Add new opcodes
+  OP_SET_LOCAL_LONG,
 //< Local Variables set-local-op
 //> Global Variables get-global-op
   OP_GET_GLOBAL,
