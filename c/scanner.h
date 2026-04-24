@@ -31,7 +31,10 @@ typedef enum {
   TOKEN_VAL,
 
   // Chapter 23 Question 1: Added More Tokens
-  TOKEN_SWITCH, TOKEN_CASE, TOKEN_DEFAULT
+  TOKEN_SWITCH, TOKEN_CASE, TOKEN_DEFAULT,
+
+  // Chapter 23 Question 2: Add TOKEN_CONTINUE
+  TOKEN_CONTINUE
 } TokenType;
 //< token-type
 //> token-struct

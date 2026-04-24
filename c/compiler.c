@@ -153,8 +153,12 @@ static Chunk* currentChunk() {
 */
 // Chapter 21 Question 1: Add global variable stringConstants
 Table stringConstants;
-//> Calls and Functions current-chunk
 
+// Chapter 23 Question 2: add global variables:
+int innermostLoopStart = -1;
+int innermostLoopScopeDepth = 0;
+
+//> Calls and Functions current-chunk
 static Chunk* currentChunk() {
   return &current->function->chunk;
 }
@@ -445,6 +449,8 @@ static void parsePrecedence(Precedence precedence);
 static void conditional(bool canAssign);
 // Chapter 22 Question 3:
 static bool isConstGlobal(Token* name);
+// Chapter 23 Question 2:
+static void continueStatement();
 
 //< Compiling Expressions forward-declarations
 //> Global Variables identifier-constant
@@ -1363,6 +1369,12 @@ static void forStatement() {
   } else {
     expressionStatement();
   }
+  // Chapter 23 Question 2: 
+  int surroundingLoopStart = innermostLoopStart;
+  int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+
+  innermostLoopStart = currentChunk()->count;
+  innermostLoopScopeDepth = current->scopeDepth;
 //< for-initializer
 
   int loopStart = currentChunk()->count;
@@ -1470,6 +1482,25 @@ static void returnStatement() {
     consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
     emitByte(OP_RETURN);
   }
+}
+
+// Chapter 23 Question 2: add continueStatement()
+static void continueStatement() {
+  if (innermostLoopStart == -1) {
+    error("Can't use 'continue' outside of a loop.");
+    return;
+  }
+
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+
+  // Pop locals declared inside loop
+  for (int i = current->localCount - 1;
+       i >= 0 && current->locals[i].depth > innermostLoopScopeDepth;
+       i--) {
+    emitByte(OP_POP);
+  }
+
+  emitLoop(innermostLoopStart);
 }
 
 // Chapter 23 Question 1: add switchStatement()
@@ -1643,6 +1674,9 @@ static void statement() {
 //> Calls and Functions match-return
   } else if (match(TOKEN_RETURN)) {
     returnStatement();
+// Chapter 23 Question 2:
+  } else if (match(TOKEN_CONTINUE)) {
+    continueStatement();
 //< Calls and Functions match-return
 //> Jumping Back and Forth parse-while
   } else if (match(TOKEN_WHILE)) {

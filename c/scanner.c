@@ -138,6 +138,9 @@ static TokenType identifierType() {
             return checkKeyword(2, 2, "se", TOKEN_CASE);
           case 'l':
             return checkKeyword(2, 3, "ass", TOKEN_CLASS);
+          // Chapter 23 Question 2: update 'case'c, adding case 'o'
+          case 'o':
+            return checkKeyword(2, 6, "ntinue", TOKEN_CONTINUE);
         }
       }
       break;
