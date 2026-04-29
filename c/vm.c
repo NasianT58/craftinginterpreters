@@ -98,7 +98,7 @@ static void runtimeError(const char* format, ...) {
 static void defineNative(const char* name, NativeFn function) {
   push(OBJ_VAL(copyString(name, (int)strlen(name))));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+  tableSet(&vm.globals, OBJ_VAL(AS_STRING(vm.stack[0])), vm.stack[1]);
   pop();
   pop();
 }
@@ -275,7 +275,7 @@ static bool callValue(Value callee, int argCount) {
         vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
 //> Methods and Initializers call-init
         Value initializer;
-        if (tableGet(&klass->methods, vm.initString,
+        if (tableGet(&klass->methods, OBJ_VAL(vm.initString),
                      &initializer)) {
           return call(AS_CLOSURE(initializer), argCount);
 //> no-init-arity-error
@@ -318,7 +318,7 @@ static bool callValue(Value callee, int argCount) {
 static bool invokeFromClass(ObjClass* klass, ObjString* name,
                             int argCount) {
   Value method;
-  if (!tableGet(&klass->methods, name, &method)) {
+  if (!tableGet(&klass->methods, OBJ_VAL(name), &method)) {
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
@@ -340,7 +340,7 @@ static bool invoke(ObjString* name, int argCount) {
 //> invoke-field
 
   Value value;
-  if (tableGet(&instance->fields, name, &value)) {
+  if (tableGet(&instance->fields, OBJ_VAL(name), &value)) {
     vm.stackTop[-argCount - 1] = value;
     return callValue(value, argCount);
   }
@@ -352,7 +352,7 @@ static bool invoke(ObjString* name, int argCount) {
 //> Methods and Initializers bind-method
 static bool bindMethod(ObjClass* klass, ObjString* name) {
   Value method;
-  if (!tableGet(&klass->methods, name, &method)) {
+  if (!tableGet(&klass->methods, OBJ_VAL(name), &method)) {
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
@@ -408,7 +408,7 @@ static void closeUpvalues(Value* last) {
 static void defineMethod(ObjString* name) {
   Value method = peek(0);
   ObjClass* klass = AS_CLASS(peek(1));
-  tableSet(&klass->methods, name, method);
+  tableSet(&klass->methods, OBJ_VAL(name), method);
   pop();
 }
 //< Methods and Initializers define-method
@@ -481,11 +481,15 @@ static void concatenate() {
 static InterpretResult run() {
 //> Calls and Functions run
   CallFrame* frame = &vm.frames[vm.frameCount - 1];
+  // Chapter 24 Question 1:
+  register uint8_t* ip = frame->ip;
 
 /* A Virtual Machine run < Calls and Functions run
 #define READ_BYTE() (*vm.ip++)
 */
-#define READ_BYTE() (*frame->ip++)
+// #define READ_BYTE() (*frame->ip++)
+// Chapter 24 Question 1: Replace parameter with (*ip++)
+#define READ_BYTE() (*ip++)
 /* A Virtual Machine read-constant < Calls and Functions run
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 */
@@ -498,9 +502,10 @@ static InterpretResult run() {
 #define READ_SHORT() \
     (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 */
+
+// Chapter 24 Question 1: Replace frame-> ip with ip
 #define READ_SHORT() \
-    (frame->ip += 2, \
-    (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+    (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
 
 /* Calls and Functions run < Closures read-constant
 #define READ_CONSTANT() \
@@ -524,9 +529,11 @@ static InterpretResult run() {
     } while (false)
 */
 //> Types of Values binary-op
+// Chapter 24 Question 1: Add frame->ip = ip;
 #define BINARY_OP(valueType, op) \
     do { \
       if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
+        frame->ip = ip; \
         runtimeError("Operands must be numbers."); \
         return INTERPRET_RUNTIME_ERROR; \
       } \
@@ -566,7 +573,8 @@ static InterpretResult run() {
 */
 //> Closures disassemble-instruction
     disassembleInstruction(&frame->closure->function->chunk,
-        (int)(frame->ip - frame->closure->function->chunk.code));
+      // Chapter 24 Question 1: Change to IP
+        (int)(ip - frame->closure->function->chunk.code));
 //< Closures disassemble-instruction
 #endif
 
@@ -638,7 +646,9 @@ static InterpretResult run() {
       case OP_GET_GLOBAL: {
         ObjString* name = READ_STRING();
         Value value;
-        if (!tableGet(&vm.globals, name, &value)) {
+        if (!tableGet(&vm.globals, OBJ_VAL(name), &value)) {
+          // Chapter 24 Question 1:
+          frame->ip = ip;
           runtimeError("Undefined variable '%s'.", name->chars);
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -649,7 +659,7 @@ static InterpretResult run() {
 //> Global Variables interpret-define-global
       case OP_DEFINE_GLOBAL: {
         ObjString* name = READ_STRING();
-        tableSet(&vm.globals, name, peek(0));
+        tableSet(&vm.globals, OBJ_VAL(name), peek(0));
         pop();
         break;
       }
@@ -657,8 +667,10 @@ static InterpretResult run() {
 //> Global Variables interpret-set-global
       case OP_SET_GLOBAL: {
         ObjString* name = READ_STRING();
-        if (tableSet(&vm.globals, name, peek(0))) {
-          tableDelete(&vm.globals, name); // [delete]
+        if (tableSet(&vm.globals, OBJ_VAL(name), peek(0))) {
+          tableDelete(&vm.globals, OBJ_VAL(name)); // [delete]
+          // Chapter 24 Question 1:
+          frame->ip = ip;
           runtimeError("Undefined variable '%s'.", name->chars);
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -692,7 +704,7 @@ static InterpretResult run() {
         ObjString* name = READ_STRING();
         
         Value value;
-        if (tableGet(&instance->fields, name, &value)) {
+        if (tableGet(&instance->fields, OBJ_VAL(name), &value)) {
           pop(); // Instance.
           push(value);
           break;
@@ -722,7 +734,7 @@ static InterpretResult run() {
 
 //< set-not-instance
         ObjInstance* instance = AS_INSTANCE(peek(1));
-        tableSet(&instance->fields, READ_STRING(), peek(0));
+        tableSet(&instance->fields, OBJ_VAL(READ_STRING()), peek(0));
         Value value = pop();
         pop();
         push(value);
@@ -777,6 +789,8 @@ static InterpretResult run() {
           double a = AS_NUMBER(pop());
           push(NUMBER_VAL(a + b));
         } else {
+          // Chapter 24 Question 1:
+          frame->ip = ip;
           runtimeError(
               "Operands must be two numbers or two strings.");
           return INTERPRET_RUNTIME_ERROR;
@@ -797,6 +811,8 @@ static InterpretResult run() {
 //> Types of Values op-negate
       case OP_NEGATE:
         if (!IS_NUMBER(peek(0))) {
+          // Chapter 24 Question 1:
+          frame->ip = ip;
           runtimeError("Operand must be a number.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -817,7 +833,8 @@ static InterpretResult run() {
         vm.ip += offset;
 */
 //> Calls and Functions jump
-        frame->ip += offset;
+// Chapter 24 Question 1: Change to IP
+        ip += offset;
 //< Calls and Functions jump
         break;
       }
@@ -829,7 +846,8 @@ static InterpretResult run() {
         if (isFalsey(peek(0))) vm.ip += offset;
 */
 //> Calls and Functions jump-if-false
-        if (isFalsey(peek(0))) frame->ip += offset;
+// Chapter 24 Question 1: Change to IP
+        if (isFalsey(peek(0))) ip += offset;
 //< Calls and Functions jump-if-false
         break;
       }
@@ -841,7 +859,8 @@ static InterpretResult run() {
         vm.ip -= offset;
 */
 //> Calls and Functions loop
-        frame->ip -= offset;
+// Chapter 24 Question 1: Change to IP
+        ip -= offset;
 //< Calls and Functions loop
         break;
       }
@@ -849,11 +868,15 @@ static InterpretResult run() {
 //> Calls and Functions interpret-call
       case OP_CALL: {
         int argCount = READ_BYTE();
+        // Chapter 24 Question 1: save before call
+        frame->ip = ip;
         if (!callValue(peek(argCount), argCount)) {
           return INTERPRET_RUNTIME_ERROR;
         }
 //> update-frame-after-call
         frame = &vm.frames[vm.frameCount - 1];
+        // Chapter 24 Question 1: Add Load Callee's IP
+        ip = frame->ip;
 //< update-frame-after-call
         break;
       }
@@ -932,6 +955,8 @@ static InterpretResult run() {
         vm.stackTop = frame->slots;
         push(result);
         frame = &vm.frames[vm.frameCount - 1];
+        // Chapter 24 Question 1:
+        ip = frame->ip;
         break;
 //< Calls and Functions interpret-return
       }
