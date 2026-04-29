@@ -111,7 +111,10 @@ typedef struct {
 //< Calls and Functions obj-function
 //> Calls and Functions obj-native
 
-typedef Value (*NativeFn)(int argCount, Value* args);
+// typedef Value (*NativeFn)(int argCount, Value* args);
+// Chapter 24 Question 2: Modify typedef Value
+typedef bool (*NativeFn)(int argCount, Value* args);
+
 
 typedef struct {
   Obj obj;
