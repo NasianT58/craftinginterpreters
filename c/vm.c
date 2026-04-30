@@ -33,6 +33,34 @@ static bool clockNative(int argCount, Value* args) {
   args[-1] = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
   return true;
 }
+
+// Chapter 24 Question 4: Add typeNative function
+static bool typeNative(int argCount, Value* args) {
+  if (argCount != 1) {
+    args[-1] = OBJ_VAL(copyString("type() expects 1 argument.", 26));
+    return false;
+  }
+
+  Value value = args[0];
+
+  if (IS_NUMBER(value)) {
+    args[-1] = OBJ_VAL(copyString("number", 6));
+  } else if (IS_BOOL(value)) {
+    args[-1] = OBJ_VAL(copyString("bool", 4));
+  } else if (IS_NIL(value)) {
+    args[-1] = OBJ_VAL(copyString("nil", 3));
+  } else if (IS_STRING(value)) {
+    args[-1] = OBJ_VAL(copyString("string", 6));
+  } else if (IS_FUNCTION(value) || IS_CLOSURE(value)) {
+    args[-1] = OBJ_VAL(copyString("function", 8));
+  } else if (IS_NATIVE(value)) {
+    args[-1] = OBJ_VAL(copyString("native", 6));
+  } else {
+    args[-1] = OBJ_VAL(copyString("unknown", 7));
+  }
+  return true;
+}
+
 //< Calls and Functions clock-native
 //> reset-stack
 static void resetStack() {
@@ -142,6 +170,8 @@ void initVM() {
 //> Calls and Functions define-native-clock
 
   defineNative("clock", clockNative);
+  // Chapter 24 Question 4: register typeNative
+  defineNative("type", typeNative);
 //< Calls and Functions define-native-clock
 }
 
