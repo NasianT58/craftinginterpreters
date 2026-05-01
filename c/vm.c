@@ -83,6 +83,15 @@ static void resetStack() {
 }
 */
 
+// Chapter 25 Question 1: add getFrameFunction() helper
+static inline ObjFunction* getFrameFunction(CallFrame* frame) {
+  if (frame->function->type == OBJ_FUNCTION) {
+    return (ObjFunction*)frame->function;
+  } else {
+    return ((ObjClosure*)frame->function)->function;
+  }
+}
+
 static void runtimeError(const char* format, ...) {
   va_list args;
   va_start(args, format);
@@ -109,7 +118,9 @@ static void runtimeError(const char* format, ...) {
     ObjFunction* function = frame->function;
 */
 //> Closures runtime-error-function
-    ObjFunction* function = frame->closure->function;
+// Chapter 25 Question 1: Modify runtimeError()
+    // ObjFunction* function = frame->closure->function;
+    ObjFunction* function = getFrameFunction(frame);
 //< Closures runtime-error-function
     size_t instruction = frame->ip - function->chunk.code - 1;
     fprintf(stderr, "[line %d] in ", // [minus]
@@ -252,42 +263,35 @@ static bool call(ObjFunction* function, int argCount) {
 */
 //> Calls and Functions call
 //> Closures call-signature
-static bool call(ObjClosure* closure, int argCount) {
-//< Closures call-signature
-/* Calls and Functions check-arity < Closures check-arity
+
+// Chapter 25 Question 1: Replace call() function with call(), callClosure() and callFunction()
+static bool call(Obj* callee, ObjFunction* function, int argCount) {
   if (argCount != function->arity) {
     runtimeError("Expected %d arguments but got %d.",
         function->arity, argCount);
-*/
-//> Closures check-arity
-  if (argCount != closure->function->arity) {
-    runtimeError("Expected %d arguments but got %d.",
-        closure->function->arity, argCount);
-//< Closures check-arity
-//> check-arity
     return false;
   }
 
-//< check-arity
-//> check-overflow
   if (vm.frameCount == FRAMES_MAX) {
     runtimeError("Stack overflow.");
     return false;
   }
 
-//< check-overflow
   CallFrame* frame = &vm.frames[vm.frameCount++];
-/* Calls and Functions call < Closures call-init-closure
-  frame->function = function;
+  frame->function = (Obj*)callee;
   frame->ip = function->chunk.code;
-*/
-//> Closures call-init-closure
-  frame->closure = closure;
-  frame->ip = closure->function->chunk.code;
-//< Closures call-init-closure
   frame->slots = vm.stackTop - argCount - 1;
   return true;
 }
+
+static bool callClosure(ObjClosure* closure, int argCount) {
+  return call((Obj*)closure, closure->function, argCount);
+}
+
+static bool callFunction(ObjFunction* function, int argCount) {
+  return call((Obj*)function, function, argCount);
+}
+
 //< Calls and Functions call
 //> Calls and Functions call-value
 static bool callValue(Value callee, int argCount) {
@@ -299,7 +303,8 @@ static bool callValue(Value callee, int argCount) {
 //> store-receiver
         vm.stackTop[-argCount - 1] = bound->receiver;
 //< store-receiver
-        return call(bound->method, argCount);
+        // Chapter 25 Question 1: Change OBJ_BOUND_METHOD call signature
+        return callClosure(bound->method, argCount);
       }
 //< Methods and Initializers call-bound-method
 //> Classes and Instances call-class
@@ -310,7 +315,8 @@ static bool callValue(Value callee, int argCount) {
         Value initializer;
         if (tableGet(&klass->methods, OBJ_VAL(vm.initString),
                      &initializer)) {
-          return call(AS_CLOSURE(initializer), argCount);
+          // Chapter 25 Question 1: Change initializer call signature
+          return callClosure(AS_CLOSURE(initializer), argCount);
 //> no-init-arity-error
         } else if (argCount != 0) {
           runtimeError("Expected 0 arguments but got %d.",
@@ -323,8 +329,11 @@ static bool callValue(Value callee, int argCount) {
       }
 //< Classes and Instances call-class
 //> Closures call-value-closure
+// Chapter 25 Question 1: Fix callValue()
       case OBJ_CLOSURE:
-        return call(AS_CLOSURE(callee), argCount);
+        return callClosure(AS_CLOSURE(callee), argCount);
+      case OBJ_FUNCTION:
+        return callFunction(AS_FUNCTION(callee), argCount);
 //< Closures call-value-closure
 /* Calls and Functions call-value < Closures call-value-closure
       case OBJ_FUNCTION: // [switch]
@@ -364,7 +373,8 @@ static bool invokeFromClass(ObjClass* klass, ObjString* name,
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
-  return call(AS_CLOSURE(method), argCount);
+  // Chapter 25 Question 1: Change invokeFromClass call signature
+  return callClosure(AS_CLOSURE(method), argCount);
 }
 //< Methods and Initializers invoke-from-class
 //> Methods and Initializers invoke
@@ -554,8 +564,9 @@ static InterpretResult run() {
     (frame->function->chunk.constants.values[READ_BYTE()])
 */
 //> Closures read-constant
+// Chapter 25 Question 1: Fix READ_CONSTANT Macro
 #define READ_CONSTANT() \
-    (frame->closure->function->chunk.constants.values[READ_BYTE()])
+    (getFrameFunction(frame)->chunk.constants.values[READ_BYTE()])
 //< Closures read-constant
 
 //< Calls and Functions run
@@ -613,10 +624,11 @@ static InterpretResult run() {
     disassembleInstruction(&frame->function->chunk,
         (int)(frame->ip - frame->function->chunk.code));
 */
+// Chapter 25 Question 1: Modify disassembleInstruction
 //> Closures disassemble-instruction
-    disassembleInstruction(&frame->closure->function->chunk,
+    disassembleInstruction(&getFrameFunction(frame)->chunk,
       // Chapter 24 Question 1: Change to IP
-        (int)(ip - frame->closure->function->chunk.code));
+        (int)(ip - getFrameFunction(frame)->chunk.code));
 //< Closures disassemble-instruction
 #endif
 
@@ -722,14 +734,16 @@ static InterpretResult run() {
 //> Closures interpret-get-upvalue
       case OP_GET_UPVALUE: {
         uint8_t slot = READ_BYTE();
-        push(*frame->closure->upvalues[slot]->location);
+        // Chapter 25 Question 1: Fix OP_GET_UPVALUE
+        push(*((ObjClosure*)frame->function)->upvalues[slot]->location);
         break;
       }
 //< Closures interpret-get-upvalue
 //> Closures interpret-set-upvalue
       case OP_SET_UPVALUE: {
         uint8_t slot = READ_BYTE();
-        *frame->closure->upvalues[slot]->location = peek(0);
+        // Chapter 25 Question 1: Fix OP_SET_UPVALUE
+        *((ObjClosure*)frame->function)->upvalues[slot]->location = peek(0);
         break;
       }
 //< Closures interpret-set-upvalue
@@ -959,7 +973,8 @@ static InterpretResult run() {
             closure->upvalues[i] =
                 captureUpvalue(frame->slots + index);
           } else {
-            closure->upvalues[i] = frame->closure->upvalues[index];
+            // Chapter 25 Question 1: Fix OP_CLOSURE
+            closure->upvalues[i] = ((ObjClosure*)frame->function)->upvalues[index];
           }
         }
 //< interpret-capture-upvalues
@@ -1099,7 +1114,8 @@ InterpretResult interpret(const char* source) {
   ObjClosure* closure = newClosure(function);
   pop();
   push(OBJ_VAL(closure));
-  call(closure, 0);
+  // Chapter 25 Question 1: Edit interpret() call signature
+  callClosure(closure, 0);
 //< Closures interpret
 //< Scanning on Demand vm-interpret-c
 //> Compiling Expressions interpret-chunk

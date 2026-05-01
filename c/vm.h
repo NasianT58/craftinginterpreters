@@ -31,7 +31,9 @@ typedef struct {
   ObjFunction* function;
 */
 //> Closures call-frame-closure
-  ObjClosure* closure;
+// Chapter 25 Question 1: Replace ObjClosure* closure
+  // ObjClosure* closure;
+  Obj* function;
 //< Closures call-frame-closure
   uint8_t* ip;
   Value* slots;

@@ -1189,21 +1189,23 @@ static void function(FunctionType type) {
   consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
   block();
 
+  // Chapter 25 Question 1: Change function emission at end of function() 
   ObjFunction* function = endCompiler();
-/* Calls and Functions compile-function < Closures emit-closure
-  emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
-*/
-//> Closures emit-closure
-  emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
-//< Closures emit-closure
-//> Closures capture-upvalues
+  uint8_t functionConstant = makeConstant(OBJ_VAL(function));
+  if (function->upvalueCount > 0) {
+    emitBytes(OP_CLOSURE, functionConstant);
 
-  for (int i = 0; i < function->upvalueCount; i++) {
-    emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-    emitByte(compiler.upvalues[i].index);
+    for (int i = 0; i < function->upvalueCount; i++) {
+      emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+      emitByte(compiler.upvalues[i].index);
+    }
+  } else {
+    emitBytes(OP_CONSTANT, functionConstant);
   }
 //< Closures capture-upvalues
 }
+
+
 //< Calls and Functions compile-function
 //> Methods and Initializers method
 static void method() {
