@@ -146,6 +146,18 @@ static void defineNative(const char* name, NativeFn function) {
 }
 //< Calls and Functions define-native
 
+// Chapter 27 Question 1: Add native function hasFieldNative()
+static Value hasFieldNative(int argCount, Value* args) {
+  if (argCount != 2) return NIL_VAL;
+  if (!IS_INSTANCE(args[0])) return NIL_VAL;
+  if (!IS_STRING(args[1])) return NIL_VAL;
+
+  ObjInstance* instance = AS_INSTANCE(args[0]);
+  Value dummy;
+  // Chapter 27 Question 1: key is now Value, not ObjString*
+  return BOOL_VAL(tableGet(&instance->fields, args[1], &dummy));
+}
+
 // Chapter 27 Question 2: Add native functions getFieldNative(), setFieldNative()
 static Value getFieldNative(int argCount, Value* args) {
   if (argCount != 2) return NIL_VAL;
@@ -219,6 +231,8 @@ void initVM() {
   // Chapter 24 Question 4: register typeNative
   defineNative("type", typeNative);
 //< Calls and Functions define-native-clock
+// Chapter 27 Quetion 1: Define native function
+defineNative("hasField", hasFieldNative);
 // Chapter 27 Question 2: Define other Natives
   defineNative("getField", getFieldNative);
   defineNative("setField", setFieldNative);
