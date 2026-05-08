@@ -154,7 +154,7 @@ static Value getFieldNative(int argCount, Value* args) {
 
   ObjInstance* instance = AS_INSTANCE(args[0]);
   Value value;
-  // Chapter 27 Question 2: key is now Value, not ObjString*
+  // Chapter 27 Question 2: key is now Value not ObjString* from previous challenge problem
   tableGet(&instance->fields, args[1], &value);
   return value;
 }
@@ -165,9 +165,21 @@ static Value setFieldNative(int argCount, Value* args) {
   if (!IS_STRING(args[1])) return NIL_VAL;
 
   ObjInstance* instance = AS_INSTANCE(args[0]);
-  // Chapter 27 Question 2: key is now Value, not ObjString*
+  // Chapter 27 Question 2: key is now Value not ObjString* from previous challenge problem
   tableSet(&instance->fields, args[1], args[2]);
   return args[2];
+}
+
+// Chapter 27 Question 3: add native function deleteFieldNative()
+static Value deleteFieldNative(int argCount, Value* args) {
+  if (argCount != 2) return NIL_VAL;
+  if (!IS_INSTANCE(args[0])) return NIL_VAL;
+  if (!IS_STRING(args[1])) return NIL_VAL;
+
+  ObjInstance* instance = AS_INSTANCE(args[0]);
+  // Chapter 27 Question 3: key is now Value not ObjString* from previous challenge problem
+  tableDelete(&instance->fields, args[1]);
+  return NIL_VAL;
 }
 
 void initVM() {
@@ -210,6 +222,8 @@ void initVM() {
 // Chapter 27 Question 2: Define other Natives
   defineNative("getField", getFieldNative);
   defineNative("setField", setFieldNative);
+// Chapter 27 Question 3: Define deleteField
+  defineNative("deleteField", deleteFieldNative);
 }
 
 // Chapter 15 Challenge 3: Replace exisiting stack initialization
