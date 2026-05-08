@@ -146,6 +146,29 @@ static void defineNative(const char* name, NativeFn function) {
 }
 //< Calls and Functions define-native
 
+// Chapter 27 Question 2: Add native functions getFieldNative(), setFieldNative()
+static Value getFieldNative(int argCount, Value* args) {
+  if (argCount != 2) return NIL_VAL;
+  if (!IS_INSTANCE(args[0])) return NIL_VAL;
+  if (!IS_STRING(args[1])) return NIL_VAL;
+
+  ObjInstance* instance = AS_INSTANCE(args[0]);
+  Value value;
+  // Chapter 27 Question 2: key is now Value, not ObjString*
+  tableGet(&instance->fields, args[1], &value);
+  return value;
+}
+
+static Value setFieldNative(int argCount, Value* args) {
+  if (argCount != 3) return NIL_VAL;
+  if (!IS_INSTANCE(args[0])) return NIL_VAL;
+  if (!IS_STRING(args[1])) return NIL_VAL;
+
+  ObjInstance* instance = AS_INSTANCE(args[0]);
+  // Chapter 27 Question 2: key is now Value, not ObjString*
+  tableSet(&instance->fields, args[1], args[2]);
+  return args[2];
+}
 
 void initVM() {
 //> call-reset-stack
@@ -184,6 +207,9 @@ void initVM() {
   // Chapter 24 Question 4: register typeNative
   defineNative("type", typeNative);
 //< Calls and Functions define-native-clock
+// Chapter 27 Question 2: Define other Natives
+  defineNative("getField", getFieldNative);
+  defineNative("setField", setFieldNative);
 }
 
 // Chapter 15 Challenge 3: Replace exisiting stack initialization
