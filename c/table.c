@@ -136,6 +136,12 @@ bool tableSet(Table* table, Value key, Value value) { // was: Table* table, ObjS
   if (isNewKey && IS_NIL(entry->value)) table->count++;
 //< set-increment-count
 
+// Chapter 26 Question 3: Increase reference when assigning to global variable
+  if (IS_OBJ(value)) incRef(AS_OBJ(value));
+
+// Chapter 26 Question 3: If entry exist, decrement the referenec of the object being overwritten
+  if (!isNewKey && IS_OBJ(entry->value)) decRef(AS_OBJ(entry->value));
+  
   entry->key = key;
   entry->value = value;
   return isNewKey;

@@ -43,5 +43,8 @@ void collectGarbage();
 //> Strings free-objects-h
 void freeObjects();
 //< Strings free-objects-h
+// Chapter 26 Question 3: Declare incRef and decRef
+void incRef(Obj* value);
+void decRef(Obj* value);
 
 #endif

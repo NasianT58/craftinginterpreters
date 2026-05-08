@@ -341,6 +341,8 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
   compiler->scopeDepth = 0;
 //> Calls and Functions init-function
   compiler->function = newFunction();
+  // Chapter 26 Question 3: this function is referenced at compiler
+  incRef((Obj*) compiler->function);
 //< Calls and Functions init-function
   current = compiler;
 //> Calls and Functions init-function-name
@@ -404,6 +406,8 @@ static ObjFunction* endCompiler() {
 //> restore-enclosing
   current = current->enclosing;
 //< restore-enclosing
+// Chapter 26 Question 3: Function is no longer referenced by the compiler
+  decRef((Obj*)function);
   return function;
 //< Calls and Functions return-function
 }

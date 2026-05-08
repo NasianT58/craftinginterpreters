@@ -94,8 +94,11 @@ struct Obj {
   bool isMarked;
 //< Garbage Collection is-marked-field
 //> next-field
+// Chapter 26 Question 3: Add refCount
+  int refCount;
   struct Obj* next;
 //< next-field
+
 };
 //> Calls and Functions obj-function
 

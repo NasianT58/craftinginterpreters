@@ -258,7 +258,7 @@ static void markRoots() {
 //> mark-closures
 
   for (int i = 0; i < vm.frameCount; i++) {
-    markObject((Obj*)vm.frames[i].closure);
+    markObject((Obj*)vm.frames[i].function);
   }
 //< mark-closures
 //> mark-open-upvalues
@@ -294,10 +294,8 @@ static void sweep() {
   Obj* previous = NULL;
   Obj* object = vm.objects;
   while (object != NULL) {
-    if (object->isMarked) {
-//> unmark
-      object->isMarked = false;
-//< unmark
+    // Chapter 26 Question 3: Changing sweep to free refCounts of 0
+    if (object->refCount > 0) {
       previous = object;
       object = object->next;
     } else {
@@ -313,6 +311,54 @@ static void sweep() {
     }
   }
 }
+
+// Chapter 26 Question 3: Add Functions: incRef(), decrementValue(), decRef()
+void incRef(Obj* value) {
+  value->refCount++;
+}
+
+static void decrementValue(Value value) {
+  if (IS_OBJ(value)) decRef(AS_OBJ(value));
+}
+
+static void decrementArray(ValueArray* value_array) {
+  for (int i = 0; i < value_array->count; i++) {
+    decrementValue(value_array->values[i]);
+  }
+}
+
+void decRef(Obj* value) {
+  if (value->refCount > 1) {
+    value->refCount--;
+  } else {
+    // Decrement refVal of objects referenced by the current object
+    switch (value->type) {
+      case OBJ_FUNCTION: {
+        ObjFunction* function = (ObjFunction*)value;
+        if (function->name != NULL) decRef((Obj*)function->name);
+        decrementArray(&function->chunk.constants);
+        break;
+      }
+      case OBJ_UPVALUE: {
+        ObjUpvalue* upvalue = (ObjUpvalue*)value;
+        decrementValue(upvalue->closed);
+        break;
+      }
+      case OBJ_CLOSURE: {
+        ObjClosure* closure = (ObjClosure*)value;
+        decRef((Obj*)closure->function);
+        for (int i = 0; i < closure->upvalueCount; i++) {
+          decRef((Obj*)closure->upvalues[i]);
+        }
+        break;
+      }
+      case OBJ_NATIVE:
+      case OBJ_STRING:
+        break;
+    }
+  }
+}
+
 //< Garbage Collection sweep
 //> Garbage Collection collect-garbage
 void collectGarbage() {
