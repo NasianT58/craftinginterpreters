@@ -21,13 +21,17 @@ class LoxInstance {
     }
 
 //> lox-instance-get-method
+
+    // Chapter 13 Q.2: findMethod now takes LoxInstance, String
+    // Chapter 13 Q.2: bind now takes LoxInstance, LoxFunction inner
+    LoxFunction method = klass.findMethod(this, name.lexeme);
+
+/* Old single-arg calls (base book):
     LoxFunction method = klass.findMethod(name.lexeme);
-/* Classes lox-instance-get-method < Classes lox-instance-bind-method
-    if (method != null) return method;
-*/
-//> lox-instance-bind-method
     if (method != null) return method.bind(this);
-//< lox-instance-bind-method
+*/
+
+    if (method != null) return method;  // findMethod already called bind internally
 
 //< lox-instance-get-method
     throw new RuntimeError(name, // [hidden]

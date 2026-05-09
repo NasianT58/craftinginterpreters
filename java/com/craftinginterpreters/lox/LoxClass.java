@@ -14,9 +14,11 @@ class LoxClass extends LoxInstance implements LoxCallable {
 //< lox-class-callable
   final String name;
 //> Inheritance lox-class-superclass-field
-/*
+
+  // Chapter 13 Q.2: superclass field needed for method traversal in findMethod
+  // (was commented out in original but findMethod's while loop requires it)
   final LoxClass superclass;
-*/
+
 //< Inheritance lox-class-superclass-field
 /* Classes lox-class < Classes lox-class-methods
 
@@ -32,21 +34,14 @@ class LoxClass extends LoxInstance implements LoxCallable {
 */
 //> Inheritance lox-class-constructor
 
-/* Old Constructor
-  LoxClass(String name, LoxClass superclass,
-           Map<String, LoxFunction> methods) {
-    this.superclass = superclass;
-//< Inheritance lox-class-constructor
-    this.name = name;
-    this.methods = methods;
-  } */
-
   // Chapter 12 Q.1: New Constructor
   // Classes themselves are instances
+  // superclass field assigned from metaclass so findMethod's while loop can traverse
   LoxClass(LoxClass metaclass, String name,
         Map<String, LoxFunction> methods) {
     super(metaclass);
     this.name = name;
+    this.superclass = metaclass;
     this.methods = methods;
   }
 
@@ -87,11 +82,9 @@ class LoxClass extends LoxInstance implements LoxCallable {
     if (superclass != null) {
       return superclass.findMethod(name);
     }
+//< Inheritance find-method-recurse-superclass
 */
 
-//< Inheritance find-method-recurse-superclass
-    return null;
-  }
 //< lox-class-find-method
 
   @Override
@@ -104,7 +97,9 @@ class LoxClass extends LoxInstance implements LoxCallable {
                      List<Object> arguments) {
     LoxInstance instance = new LoxInstance(this);
 //> lox-class-call-initializer
-    LoxFunction initializer = findMethod("init");
+
+    // Chapter 13 Q.2: findMethod now takes (instance, name)
+    LoxFunction initializer = findMethod(instance, "init");
     if (initializer != null) {
       // initializer.bind(instance).call(interpreter, arguments);
       // Chapter 13 Q.2 Calls the Initializer
@@ -121,7 +116,8 @@ class LoxClass extends LoxInstance implements LoxCallable {
     return 0;
 */
 //> lox-initializer-arity
-    LoxFunction initializer = findMethod("init");
+    // Chapter 13 Q.2: findMethod now takes (instance, name)
+    LoxFunction initializer = findMethod(new LoxInstance(this), "init");
     if (initializer == null) return 0;
     return initializer.arity();
 //< lox-initializer-arity

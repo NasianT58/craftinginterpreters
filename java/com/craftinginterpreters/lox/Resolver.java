@@ -23,7 +23,6 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   // Chapter 11. Q.4: Tracks next available index for each nested scope
   private final Stack<Integer> scopeNextIndex = new Stack<>();
 
-
   Resolver(Interpreter interpreter) {
     this.interpreter = interpreter;
   }
@@ -135,8 +134,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
       // Chapter 11. Q.3 don't store just a boolean anymore, have to change to variable object
       // Chapter 11. Q.4 Added "-1" to match Index Argument, Does not Matter
-      scopes.peek().put("this", new Variable(
-        new Token(TokenType.THIS, "this", null, 0),
+      scopes.peek().put("super", new Variable(
+        new Token(TokenType.SUPER, "super", null, 0),
         VariableState.DEFINED, -1));
 
     }
@@ -156,7 +155,6 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     scopes.peek().put("inner", new Variable(
       new Token(TokenType.THIS, "this", null, 0),
       VariableState.DEFINED, -1));
-
 
 //< resolver-begin-this-scope
     for (Stmt.Function method : stmt.methods) {
@@ -275,6 +273,13 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 //< visit-while-stmt
+
+// Chapter 9. C.3: Break has nothing to resolve
+  @Override
+  public Void visitBreakStmt(Stmt.Break stmt) {
+    return null;
+  }
+
 //> visit-assign-expr
   @Override
   public Void visitAssignExpr(Expr.Assign expr) {
@@ -310,6 +315,23 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 //< visit-call-expr
+
+  // Ch 6 Q.2: Ternary, resolve all three sub-expressions
+  @Override
+  public Void visitConditionalExpr(Expr.Conditional expr) {
+    resolve(expr.condition);
+    resolve(expr.thenBranch);
+    resolve(expr.elseBranch);
+    return null;
+  }
+
+  // Chapter 10. Q.2: Anonymous function expression, resolve like a named function
+  @Override
+  public Void visitFunctionExpr(Expr.Function expr) {
+    resolveFunctionExpr(expr);
+    return null;
+  }
+
 //> Classes resolver-visit-get
   @Override
   public Void visitGetExpr(Expr.Get expr) {
@@ -450,26 +472,6 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private void resolveFunction(Stmt.Function function) {
 */
 //> set-current-function
-/* Old Method
-  private void resolveFunction(
-      Stmt.Function function, FunctionType type) {
-    FunctionType enclosingFunction = currentFunction;
-    currentFunction = type;
-
-//< set-current-function
-    beginScope();
-    for (Token param : function.params) {
-      declare(param);
-      define(param);
-    }
-    resolve(function.body);
-    endScope();
-//> restore-current-function
-    currentFunction = enclosingFunction;
-//< restore-current-function
-  }
-//< resolve-function
-*/
 
 // Chapter 12 Q.2: Declares and Defines a function's scope by parameters
 // If function is a getter, it has no parameters
@@ -481,11 +483,29 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     if (function.params != null) {
       for (Token param : function.params) {
         declare(param);
-       define(param);
+        define(param);
       }
     }
     resolve(function.body);
-   endScope();
+    endScope();
+    currentFunction = enclosingFunction;
+  }
+
+  // Chapter 10. Q.2: Resolve an anonymous Expr.Function the same way as a named function
+  private void resolveFunctionExpr(Expr.Function function) {
+    FunctionType enclosingFunction = currentFunction;
+    currentFunction = FunctionType.FUNCTION;
+
+    beginScope();
+    if (function.params != null) {
+      for (Token param : function.params) {
+        declare(param);
+        define(param);
+      }
+    }
+    resolve(function.body);
+    endScope();
+
     currentFunction = enclosingFunction;
   }
 
@@ -523,6 +543,7 @@ private void beginScope() {
  private void endScope() {
   // Retrieve Current Scope
     Map<String, Variable> scope = scopes.pop();
+    scopeNextIndex.pop();
   // Iterate through variables in local scope
     for (Map.Entry<String, Variable> entry : scope.entrySet()) {
       if (entry.getValue().state == VariableState.DEFINED) {
@@ -531,7 +552,6 @@ private void beginScope() {
       }
     }
   }
-
 
 //< end-scope
 //> declare
@@ -579,8 +599,6 @@ private void declare(Token name) {
 
 //< declare
 
-
-
 //> define
 /*
   private void define(Token name) {
@@ -595,7 +613,6 @@ private void define(Token name) {
     scopes.peek().get(name.lexeme).state = VariableState.DEFINED;
   }
 //< define
-
 
 //> resolve-local
 

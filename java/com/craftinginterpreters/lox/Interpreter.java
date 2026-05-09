@@ -87,20 +87,6 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 
   }
 
-  /*  Chapter 10. Q.2: Named Functions
-  @Override
-  public Void visitFunctionStmt(Stmt.Function stmt) {
-    String fnName = stmt.name.lexeme;
-    environment.define(fnName, new LoxFunction(fnName, stmt.function, environment));
-    return null;
-  } */
-
-  /*  Chapter 10. Q.2: Anonymous Functions
-  @Override
-  public Object visitFunctionExpr(Expr.Function expr) {
-    return new LoxFunction(null, expr, environment);
-  } */
-
   // Chapter 8 C.1 Statements will be executed, expressions will be evaluated and returned
   String interpret(Expr expression) {
     try {
@@ -146,11 +132,6 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 //< Statements and State execute
 //> Resolving and Binding resolve
 
-/* Old Method
-  void resolve(Expr expr, int depth) {
-    locals.put(expr, depth);
-  } */
-
   // Chapter 11. Q.4: Add to Accept Index
   void resolve(Expr expr, int depth, int index) {
     locals.put(expr, new int[]{depth, index});
@@ -180,19 +161,6 @@ private final Map<Expr, int[]> locals = new HashMap<>();
   }
 //< Statements and State visit-block
 //> Classes interpreter-visit-class
-/* Old Method
-  @Override
-  public Void visitClassStmt(Stmt.Class stmt) {
-//> Inheritance interpret-superclass
-    Object superclass = null;
-    if (stmt.superclass != null) {
-      superclass = evaluate(stmt.superclass);
-      if (!(superclass instanceof LoxClass)) {
-        throw new RuntimeError(stmt.superclass.name,
-            "Superclass must be a class.");
-      }
-    }
-*/
 
 // Chapter 12 Q.1: LoxClass is an instance of LoxInstance
   @Override
@@ -220,7 +188,19 @@ private final Map<Expr, int[]> locals = new HashMap<>();
     return null;
   }
 
-//< Inheritance interpret-superclass
+/* Old visitClassStmt (base book with Inheritance):
+  @Override
+  public Void visitClassStmt(Stmt.Class stmt) {
+//> Inheritance interpret-superclass
+    Object superclass = null;
+    if (stmt.superclass != null) {
+      superclass = evaluate(stmt.superclass);
+      if (!(superclass instanceof LoxClass)) {
+        throw new RuntimeError(stmt.superclass.name,
+            "Superclass must be a class.");
+      }
+    }
+
     environment.define(stmt.name.lexeme, null);
 //> Inheritance begin-superclass-environment
 
@@ -233,9 +213,6 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 
     Map<String, LoxFunction> methods = new HashMap<>();
     for (Stmt.Function method : stmt.methods) {
-/* Classes interpret-methods < Classes interpreter-method-initializer
-      LoxFunction function = new LoxFunction(method, environment);
-*/
 //> interpreter-method-initializer
       LoxFunction function = new LoxFunction(method, environment,
           method.name.lexeme.equals("init"));
@@ -243,9 +220,6 @@ private final Map<Expr, int[]> locals = new HashMap<>();
       methods.put(method.name.lexeme, function);
     }
 
-/* Classes interpret-methods < Inheritance interpreter-construct-class
-    LoxClass klass = new LoxClass(stmt.name.lexeme, methods);
-*/
 //> Inheritance interpreter-construct-class
     LoxClass klass = new LoxClass(stmt.name.lexeme,
         (LoxClass)superclass, methods);
@@ -258,16 +232,15 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 
 //< Inheritance interpreter-construct-class
 //< interpret-methods
-/* Classes interpreter-visit-class < Classes interpret-methods
-    LoxClass klass = new LoxClass(stmt.name.lexeme);
-*/
     environment.assign(stmt.name, klass);
     return null;
   }
+*/
+
 //< Classes interpreter-visit-class
 //> Statements and State visit-expression-stmt
   @Override
-  public void visitExpressionStmt(Stmt.Expression stmt) {
+  public Void visitExpressionStmt(Stmt.Expression stmt) {
     evaluate(stmt.expression);
     return null;
   }
@@ -342,9 +315,15 @@ private final Map<Expr, int[]> locals = new HashMap<>();
       // Do nothing, just exit the loop.
     }
     return null;
-}
-
+  }
 //< Control Flow visit-while
+
+// Chapter 9. C.3 Break Statement visitor
+  @Override
+  public Void visitBreakStmt(Stmt.Break stmt) {
+    throw new BreakException();
+  }
+
 //> Statements and State visit-assign
  
   @Override
@@ -366,7 +345,6 @@ private final Map<Expr, int[]> locals = new HashMap<>();
     }
 */
 
-
   // Chapter 11. Q.4: Will now Return a int[] instead of an Integer
   int[] location = locals.get(expr);
 
@@ -375,7 +353,6 @@ private final Map<Expr, int[]> locals = new HashMap<>();
   } else {
     globals.assign(expr.name, value);
   }
-
 
 //< Resolving and Binding resolved-assign
     return value;
@@ -441,6 +418,11 @@ private final Map<Expr, int[]> locals = new HashMap<>();
             "Operands must be two numbers or two strings.");
 //< string-wrong-type
 //< binary-plus
+
+      //Ch 6. Q.1: Comma operator, evaluates both sides, returns right
+      case COMMA:
+        return right;
+
       case SLASH:
 //> check-slash-operand
         checkNumberOperands(expr.operator, left, right);
@@ -455,10 +437,10 @@ private final Map<Expr, int[]> locals = new HashMap<>();
         checkNumberOperands(expr.operator, left, right);
 //< check-star-operand
         return (double)left * (double)right;
+      default:
+        // Unreachable.
+        return null;
     }
-
-    // Unreachable.
-    return null;
   }
 //< visit-binary
 //> Functions visit-call
@@ -490,6 +472,25 @@ private final Map<Expr, int[]> locals = new HashMap<>();
     return function.call(this, arguments);
   }
 //< Functions visit-call
+
+  // Ch 6 Q.2: Ternary operator, evaluates condition then only matching branch
+  @Override
+  public Object visitConditionalExpr(Expr.Conditional expr) {
+    if (isTruthy(evaluate(expr.condition))) {
+      return evaluate(expr.thenBranch);
+    } else {
+      return evaluate(expr.elseBranch);
+    }
+  }
+
+  // Chapter 10. Q.2: Anonymous Functions
+  // Changed to wrap Expr.Function directly since Ch 10 Q.2 and Ch 12 Q.2 (getters)
+  // both use LoxFunction; two constructors on LoxFunction handle both cases
+  @Override
+  public Object visitFunctionExpr(Expr.Function expr) {
+    return new LoxFunction(expr, environment);
+  }
+
 //> Classes interpreter-visit-get
 
 //Chapter 12 Q.2: Edited visitGetExpr
@@ -498,9 +499,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
     Object object = evaluate(expr.object);
 
     if (object instanceof LoxInstance) {
-      // return ((LoxInstance) object).get(expr.name);
-
-      // Chapter 12 Q.2:getter functions have params as null, so no arguments are bound
+      // Chapter 12 Q.2: getter functions have params as null, so no arguments are bound
       Object result = ((LoxInstance) object).get(expr.name);
 
       if (result instanceof LoxFunction &&
@@ -573,7 +572,8 @@ private final Map<Expr, int[]> locals = new HashMap<>();
 //< super-find-this
 //> super-find-method
 
-    LoxFunction method = superclass.findMethod(expr.method.lexeme);
+    // Chapter 13 Q.2: findMethod now takes (instance, name); bind handled inside findMethod
+    LoxFunction method = superclass.findMethod(object, expr.method.lexeme);
 //> super-no-method
 
     if (method == null) {
@@ -582,7 +582,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
     }
 
 //< super-no-method
-    return method.bind(object);
+    return method.bind(object, null);
 //< super-find-method
   }
 //< Inheritance interpreter-visit-super
@@ -607,29 +607,16 @@ private final Map<Expr, int[]> locals = new HashMap<>();
         checkNumberOperand(expr.operator, right);
 //< check-unary-operand
         return -(double)right;
+      default:
+        // Unreachable.
+        return null;
     }
-
-    // Unreachable.
-    return null;
   }
 //< visit-unary
 //> Statements and State visit-variable
-// Ch 8 C.2 throws runtime error we read uninitialized
-/* Old Method
-  @Override
-  public Object visitVariableExpr(Expr.Variable expr) {
-    Object value = environment.get(expr.name);
-    if (value == uninitialized) {
-      throw new RuntimeError(
-          expr.name,
-          "Variable must be initialized before use."
-      );
-    }
-    return value;
-  }
-*/
 
 // Chapter 11. C.4: Optimized to change lookupVariable call
+// Chapter 8 C.2, throws runtime error we read unitialized
 @Override
 public Object visitVariableExpr(Expr.Variable expr) {
   Object value = lookupVariable(expr.name, expr);
@@ -643,8 +630,6 @@ public Object visitVariableExpr(Expr.Variable expr) {
 
   return value;
 }
-
-
 
 //> Resolving and Binding look-up-variable
 /* Old Method

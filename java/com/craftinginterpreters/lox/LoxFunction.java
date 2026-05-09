@@ -10,7 +10,11 @@ class LoxFunction implements LoxCallable {
   private final Expr.Function declaration;
   */
 
+  // Named function declaration (Stmt.Function path); null for anonymous functions
   private final Stmt.Function declaration;
+
+  // Ch 10 Q.2: Anonymous function declaration (Expr.Function path); null for named functions
+  private final Expr.Function anonDeclaration;
 
 //> closure-field
   private final Environment closure;
@@ -33,22 +37,31 @@ class LoxFunction implements LoxCallable {
     this.closure = closure;
 //< closure-constructor
     this.declaration = declaration;
+    this.anonDeclaration = null;
+  }
+
+  // Chapter 10. Q.2: Constructor for anonymous function expressions
+  // Ch 10 Q.2 and Ch 12 Q.2 (getters) both use LoxFunction; two constructors handle both
+  LoxFunction(Expr.Function declaration, Environment closure) {
+    this.anonDeclaration = declaration;
+    this.declaration = null;
+    this.closure = closure;
+    this.isInitializer = false;
   }
 
   // Chapter 12 Q.2: Added isGetter helper function
   public boolean isGetter() {
-    return declaration.params == null;
+    return declaration != null && declaration.params == null;
   }
 
-  /* Chapter 10, Q. 2, Replace COnstructor
-  LoxFunction(String name,
-            Expr.Function declaration,
-            Environment closure) {
+  // Helper methods to get params/body from whichever declaration is active
+  private List<Token> params() {
+    return declaration != null ? declaration.params : anonDeclaration.params;
+  }
 
-  this.name = name;
-  this.declaration = declaration;
-  this.closure = closure;
-} */
+  private List<Stmt> body() {
+    return declaration != null ? declaration.body : anonDeclaration.body;
+  }
 
 //> Classes bind-instance
 // Chapter 13 Q.2: Added "LoxFunction inner" parameter
@@ -61,33 +74,30 @@ class LoxFunction implements LoxCallable {
     return new LoxFunction(declaration, environment);
 */
 //> lox-function-bind-with-initializer
-    return new LoxFunction(declaration, environment,
-                           isInitializer);
+    if (declaration != null) {
+      return new LoxFunction(declaration, environment, isInitializer);
+    } else {
+      return new LoxFunction(anonDeclaration, environment);
+    }
 //< lox-function-bind-with-initializer
   }
 //< Classes bind-instance
 //> function-to-string
 
-
-
-/*  Ch 10 Q.2 Update toString()
   @Override
   public String toString() {
-    if (name == null) return "<fn>";
-    return "<fn " + name + ">";
-  }
-*/
-
-@Override
-  public String toString() {
-    return "<fn " + declaration.name.lexeme + ">";
+    if (declaration != null) return "<fn " + declaration.name.lexeme + ">";
+    return "<fn>"; // Ch 10 Q.2: anonymous functions have no name
   }
 
 //< function-to-string
 //> function-arity
   @Override
   public int arity() {
-    return declaration.params.size();
+    List<Token> p = params();
+    // Chapter 12 Q.2: getter methods have params == null, arity is 0
+    if (p == null) return 0;
+    return p.size();
   }
 //< function-arity
 //> function-call
@@ -100,27 +110,21 @@ class LoxFunction implements LoxCallable {
 //> call-closure
     Environment environment = new Environment(closure);
 //< call-closure
-/* Old
-    for (int i = 0; i < declaration.params.size(); i++) {
-      environment.define(declaration.params.get(i).lexeme,
-          arguments.get(i));
-    }
-*/
 
-// Chapter 12 Q.2: Getter Functions have params == null --> no args are bound
-    if (declaration.params != null) {
-    for (int i = 0; i < declaration.params.size(); i++) {
-      environment.define(declaration.params.get(i).lexeme,
-          arguments.get(i));
+    // Chapter 12 Q.2: Getter Functions have params == null --> no args are bound
+    List<Token> p = params();
+    if (p != null && arguments != null) {
+      for (int i = 0; i < p.size(); i++) {
+        environment.define(p.get(i).lexeme, arguments.get(i));
+      }
     }
-  }
 
 /* Functions function-call < Functions catch-return
     interpreter.executeBlock(declaration.body, environment);
 */
 //> catch-return
     try {
-      interpreter.executeBlock(declaration.body, environment);
+      interpreter.executeBlock(body(), environment);
     } catch (Return returnValue) {
 //> Classes early-return-this
       if (isInitializer) return closure.getAt(0, "this");

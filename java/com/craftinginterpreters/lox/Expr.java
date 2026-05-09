@@ -8,6 +8,10 @@ abstract class Expr {
     R visitAssignExpr(Assign expr);
     R visitBinaryExpr(Binary expr);
     R visitCallExpr(Call expr);
+    // Chapter 6 Question 2: Ternary operator
+    R visitConditionalExpr(Conditional expr);
+    // Chapter 10 Question 2: Anonymous function expression
+    R visitFunctionExpr(Function expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
     R visitLiteralExpr(Literal expr);
@@ -72,6 +76,42 @@ abstract class Expr {
     final List<Expr> arguments;
   }
 //< expr-call
+
+// Ch 6 Q.2: Ternary operator
+  static class Conditional extends Expr {
+    Conditional(Expr condition, Expr thenBranch, Expr elseBranch) {
+      this.condition = condition;
+      this.thenBranch = thenBranch;
+      this.elseBranch = elseBranch;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitConditionalExpr(this);
+    }
+
+    final Expr condition;
+    final Expr thenBranch;
+    final Expr elseBranch;
+  }
+//< expr-conditional
+//> expr-function 
+// Chapter 10 Question 2: Anonymous function expression
+  static class Function extends Expr {
+    Function(List<Token> params, List<Stmt> body) {
+      this.params = params;
+      this.body = body;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitFunctionExpr(this);
+    }
+
+    final List<Token> params;
+    final List<Stmt> body;
+  }
+//< expr-function
 //> expr-get
   static class Get extends Expr {
     Get(Expr object, Token name) {
@@ -197,8 +237,7 @@ abstract class Expr {
     final Token operator;
     final Expr right;
   }
-//< expr-unary
-//> expr-variable
+
   static class Variable extends Expr {
     Variable(Token name) {
       this.name = name;
@@ -211,7 +250,7 @@ abstract class Expr {
 
     final Token name;
   }
-//< expr-variable
+
 
   abstract <R> R accept(Visitor<R> visitor);
 }

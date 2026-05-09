@@ -4,7 +4,7 @@
 package com.craftinginterpreters.lox;
 
 public class RpnPrinter implements Expr.Visitor<String> {
-    // create new visitor class
+
     String print(Expr expr) {
         return expr.accept(this);
     }
@@ -14,7 +14,7 @@ public class RpnPrinter implements Expr.Visitor<String> {
         return expr.value.toString();
     }
 
-    @Override 
+    @Override
     public String visitGroupingExpr(Expr.Grouping expr) {
         return expr.expression.accept(this);
     }
@@ -31,47 +31,42 @@ public class RpnPrinter implements Expr.Visitor<String> {
         return expr.right.accept(this) + " " + expr.operator.lexeme;
     }
 
-    // Method Stubs
-    // Not required, but have to implement for Expr Interface
+    // Ch 6 Q.2: Ternary — print in RPN as "condition thenBranch elseBranch ?:"
     @Override
-    public String visitAssignExpr(Expr.Assign expr) {
-        return ""; 
+    public String visitConditionalExpr(Expr.Conditional expr) {
+        String condition = expr.condition.accept(this);
+        String thenBranch = expr.thenBranch.accept(this);
+        String elseBranch = expr.elseBranch.accept(this);
+        return condition + " " + thenBranch + " " + elseBranch + " ?:";
+    }
+
+    // Ch 10 Q.2: Anonymous function — RPN representation
+    @Override
+    public String visitFunctionExpr(Expr.Function expr) {
+        return "<fn>";
     }
 
     @Override
-    public String visitCallExpr(Expr.Call expr) {
-        return ""; 
-    }
+    public String visitAssignExpr(Expr.Assign expr) { return ""; }
 
     @Override
-    public String visitGetExpr(Expr.Get expr) {
-        return ""; 
-    }
+    public String visitCallExpr(Expr.Call expr) { return ""; }
 
     @Override
-    public String visitLogicalExpr(Expr.Logical expr) {
-        return ""; 
-    }
+    public String visitGetExpr(Expr.Get expr) { return ""; }
 
     @Override
-    public String visitSetExpr(Expr.Set expr) {
-        return ""; 
-    }
+    public String visitLogicalExpr(Expr.Logical expr) { return ""; }
 
     @Override
-    public String visitSuperExpr(Expr.Super expr) {
-        return ""; 
-    }
+    public String visitSetExpr(Expr.Set expr) { return ""; }
 
     @Override
-    public String visitThisExpr(Expr.This expr) {
-        return "";
-    }
+    public String visitSuperExpr(Expr.Super expr) { return ""; }
 
     @Override
-    public String visitVariableExpr(Expr.Variable expr) {
-        return "";
-    }
-    
-    
+    public String visitThisExpr(Expr.This expr) { return ""; }
+
+    @Override
+    public String visitVariableExpr(Expr.Variable expr) { return ""; }
 }

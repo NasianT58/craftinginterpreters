@@ -21,24 +21,14 @@ class Parser {
   // Ch 9 C.3 Loop Depth for counting inner/outer
   private int loopDepth = 0;
 
-
   // Chapter 8 C.1 Fields
   private boolean allowExpression;
   private boolean foundExpression = false;
 
-
   Parser(List<Token> tokens) {
     this.tokens = tokens;
   }
-/* Parsing Expressions parse < Statements and State parse
-  Expr parse() {
-    try {
-      return expression();
-    } catch (ParseError error) {
-      return null;
-    }
-  }
-*/
+
   // Chapter 8 C.1, allows parser to return statement or expr
   Object parseRepl() {
     allowExpression = true;
@@ -53,16 +43,13 @@ class Parser {
       }
       allowExpression = false;
     }
-      return statements;
+    return statements;
   }
 
 //> Statements and State parse
   List<Stmt> parse() {
     List<Stmt> statements = new ArrayList<>();
     while (!isAtEnd()) {
-/* Statements and State parse < Statements and State parse-declaration
-      statements.add(statement());
-*/
 //> parse-declaration
       statements.add(declaration());
 //< parse-declaration
@@ -73,37 +60,19 @@ class Parser {
 //< Statements and State parse
 //> expression
   private Expr expression() {
-/* Parsing Expressions expression < Statements and State expression
-    return equality();
-*/
 //> Statements and State expression
     return comma();
 //< Statements and State expression
   }
 
-/* 
-// Gives error, because the AST for "Expr.Conditional" is not created hold ternary grammar
-private Expr conditional() {
-  Expr expr = equality(); // parsing the conditional first
-  if (match(QUESTION)) { // used to see if we see '?' to parse tenary
-    Expr thenBranch = expression(); // then expression
-    consume(COLON, "Expect ':' after then branch."); // make sure to expect ':'
-    Expr elseBranch = conditional(); //else-expression
-    expr = new Expr.Conditional(expr, thenBranch, elseBranch);
-  }
-  return expr;
-}
-*/
-
 // CS 4080 Ch 6. Q. 1
 private Expr comma() {
-  Expr expr = equality();
-  // enter loop if we see comma
+  // Ch 6 Q.2: comma delegates to assignment (which delegates to conditional)
+  // so ternary binds tighter than comma
+  Expr expr = assignment();
   while (match(COMMA)) {
     Token operator = previous();
-    // Parse right side
-    Expr right = equality();
-    // Build Binary Node
+    Expr right = assignment();
     expr = new Expr.Binary(expr, operator, right);
   }
   return expr;
@@ -112,31 +81,21 @@ private Expr comma() {
 //< expression
 //> Statements and State declaration
 
-/*Chapter 10. Q.2: replace old declaration
-  private Stmt declaration() {
-    try {
-        if (check(FUN) && checkNext(IDENTIFIER)) {
-            consume(FUN, null);
-            return function("function");
-        }
-        if (check(VAR)) return varDeclaration();
-        if (check(CLASS)) return classDeclaration();
-        return statement();
-    } catch (ParseError error) {
-        synchronize();
-        return null;
-    }
-  }
-*/
 
+// Chapter 10. Q.2: "fun" followed by identifier is a named function declaration
+// "fun" NOT followed by identifier falls through to expressionStatement where
+// primary() picks it up as an anonymous function expression
 private Stmt declaration() {
     try {
 //> Classes match-class
       if (match(CLASS)) return classDeclaration();
 //< Classes match-class
-//> Functions match-fun
-      if (match(FUN)) return function("function");
-//< Functions match-fun
+
+      if (check(FUN) && checkNext(IDENTIFIER)) {
+        advance(); // consume "fun"
+        return function("function");
+      }
+
       if (match(VAR)) return varDeclaration();
       return statement();
     } catch (ParseError error) {
@@ -158,21 +117,14 @@ private Stmt declaration() {
     }
 
 //< Inheritance parse-superclass
-    consume(LEFT_BRACE, "Expect '{' before class body.");
 
+    // Chapter 12 Q.1: Separate lists for instance methods and class methods
     List<Stmt.Function> methods = new ArrayList<>();
-
-    // Chapter 12 Q.1:
     List<Stmt.Function> classMethods = new ArrayList<>();
+
     consume(LEFT_BRACE, "Expect '{' before class body.");
 
-    /* Old Statement
-    while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      methods.add(function("method"));
-    } */
-  
-    // Chapter 12 Q.1: see "class" before method name -> static method
-
+    // Chapter 12 Q.1: "class" keyword before method name -> static/class method
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
       boolean isClassMethod = match(CLASS);
       (isClassMethod ? classMethods : methods).add(function("method"));
@@ -180,11 +132,11 @@ private Stmt declaration() {
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");
 
-/* Classes parse-class-declaration < Inheritance construct-class-ast
-    return new Stmt.Class(name, methods);
-*/
 //> Inheritance construct-class-ast
-    return new Stmt.Class(name, superclass, methods);
+
+    // Chapter 12 Q.1: Pass classMethods as 4th argument
+    return new Stmt.Class(name, superclass, methods, classMethods);
+
 //< Inheritance construct-class-ast
   }
 //< Classes parse-class-declaration
@@ -207,16 +159,26 @@ private Stmt declaration() {
     if (match(LEFT_BRACE)) return new Stmt.Block(block());
 //< parse-block
 
+    // Ch 9. C.3 Break Statement
+    if (match(BREAK)) return breakStatement();
+
     return expressionStatement();
   }
 //< Statements and State parse-statement
+
+// Ch 9. C.3 Break statement parser
+  private Stmt breakStatement() {
+    if (loopDepth == 0) {
+      error(previous(), "Must be inside a loop to use 'break'.");
+    }
+    consume(SEMICOLON, "Expect ';' after 'break'.");
+    return new Stmt.Break();
+  }
+
 //> Control Flow for-statement
   private Stmt forStatement() {
     consume(LEFT_PAREN, "Expect '(' after 'for'.");
 
-/* Control Flow for-statement < Control Flow for-initializer
-    // More here...
-*/
 //> for-initializer
     Stmt initializer;
     if (match(SEMICOLON)) {
@@ -344,36 +306,9 @@ private Stmt declaration() {
     return new Stmt.Expression(expr);
   }
 
-/* Chapter 10 Q.2 Function Body Method
+// Chapter 10 Q.2: Parses body of an anonymous function expression
+// Returns Expr.Function (no name token). Example: fun(x, y) { return x + y; }
   private Expr.Function functionBody(String kind) {
-      consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
-      List<Token> parameters = new ArrayList<>();
-      if (!check(RIGHT_PAREN)) {
-          do {
-             if (parameters.size() >= 8) {
-                  error(peek(), "Can't have more than 8 parameters.");
-              }
-              parameters.add(consume(IDENTIFIER, "Expect parameter name."));
-          } while (match(COMMA));
-      }
-      consume(RIGHT_PAREN, "Expect ')' after parameters.");
-      consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
-      List<Stmt> body = block();
-      return new Expr.Function(parameters, body);
-  }
-  */
-
-  /* Chapter 10. Q.2: Helper Method, replacing old
-  private Stmt.Function function(String kind) {
-    Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
-    return new Stmt.Function(name, functionBody(kind));
-  } 
-  */
-
-/* Old Method
-   private Stmt.Function function(String kind) {
-    Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
-//> parse-parameters
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
     List<Token> parameters = new ArrayList<>();
     if (!check(RIGHT_PAREN)) {
@@ -381,39 +316,38 @@ private Stmt declaration() {
         if (parameters.size() >= 255) {
           error(peek(), "Can't have more than 255 parameters.");
         }
-
-        parameters.add(
-            consume(IDENTIFIER, "Expect parameter name."));
+        parameters.add(consume(IDENTIFIER, "Expect parameter name."));
       } while (match(COMMA));
     }
     consume(RIGHT_PAREN, "Expect ')' after parameters.");
-//< parse-parameters
-//> parse-body
-
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, parameters, body);
-//< parse-body
+    return new Expr.Function(parameters, body);
   }
-*/
 
-// Chapter 12 Q.2: Parses a Function/Method
-// Edited to represent getters
+  // Chapter 10. Q.2: Handling Named vs. Anonymous Functions
+  private boolean checkNext(TokenType tokenType) {
+    if (isAtEnd()) return false;
+    if (tokens.get(current + 1).type == EOF) return false;
+    return tokens.get(current + 1).type == tokenType;
+  }
+
+// Chapter 12 Q.2: Parses a Function/Method; allows omitting parameter list for getters
+// Chapter 10. Q.2: Helper method, which was edited with old one
   private Stmt.Function function(String kind) {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
 
     List<Token> parameters = null;
 
-    // Allow omitting the parameter list entirely in method getters.
-   if (!kind.equals("method") || check(LEFT_PAREN)) {
-     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+    // Allow omitting the parameter list entirely for method getters.
+    if (!kind.equals("method") || check(LEFT_PAREN)) {
+      consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
       parameters = new ArrayList<>();
       if (!check(RIGHT_PAREN)) {
-       do {
+        do {
           if (parameters.size() >= 255) {
-           error(peek(), "Can't have more than 255 parameters.");
+            error(peek(), "Can't have more than 255 parameters.");
           }
-
           parameters.add(consume(IDENTIFIER, "Expect parameter name."));
         } while (match(COMMA));
       }
@@ -425,45 +359,7 @@ private Stmt declaration() {
     return new Stmt.Function(name, parameters, body);
   }
 
-  /* Chapter 10. Q.2: Handling Named vs. Anonymous Functions
-  private boolean checkNext(TokenType tokenType) {
-    if (isAtEnd()) return false;
-    if (tokens.get(current + 1).type == EOF) return false;
-    return tokens.get(current + 1).type == tokenType;
-  } */
-
-
 //< Statements and State parse-expression-statement
-//> Functions parse-function
-
-/* 
-  private Stmt.Function function(String kind) {
-    Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
-//> parse-parameters
-    consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
-    List<Token> parameters = new ArrayList<>();
-    if (!check(RIGHT_PAREN)) {
-      do {
-        if (parameters.size() >= 255) {
-          error(peek(), "Can't have more than 255 parameters.");
-        }
-
-        parameters.add(
-            consume(IDENTIFIER, "Expect parameter name."));
-      } while (match(COMMA));
-    }
-    consume(RIGHT_PAREN, "Expect ')' after parameters.");
-//< parse-parameters
-//> parse-body
-
-    consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
-    List<Stmt> body = block();
-    return new Stmt.Function(name, parameters, body);
-//< parse-body
-  }
-*/
-
-//< Functions parse-function
 //> Statements and State block
   private List<Stmt> block() {
     List<Stmt> statements = new ArrayList<>();
@@ -478,11 +374,9 @@ private Stmt declaration() {
 //< Statements and State block
 //> Statements and State parse-assignment
   private Expr assignment() {
-/* Statements and State parse-assignment < Control Flow or-in-assignment
-    Expr expr = equality();
-*/
 //> Control Flow or-in-assignment
-    Expr expr = or();
+    // Ch 6 Q.2: assignment delegates to conditional (ternary) before checking '='
+    Expr expr = conditional();
 //< Control Flow or-in-assignment
 
     if (match(EQUAL)) {
@@ -505,6 +399,22 @@ private Stmt declaration() {
     return expr;
   }
 //< Statements and State parse-assignment
+
+  // Ch 6 Q.2: Ternary conditional operator, right-associative
+  // Grammar: conditional -> or ( "?" expression ":" conditional )?
+  private Expr conditional() {
+    Expr expr = or();
+
+    if (match(QUESTION)) {
+      Expr thenBranch = expression(); // then expression
+      consume(COLON, "Expect ':' after then branch of ternary expression.");
+      Expr elseBranch = conditional(); // else-expression, right-associative
+      expr = new Expr.Conditional(expr, thenBranch, elseBranch);
+    }
+
+    return expr;
+  }
+
 //> Control Flow or
   private Expr or() {
     Expr expr = and();
@@ -591,9 +501,6 @@ private Stmt declaration() {
       return new Expr.Unary(operator, right);
     }
 
-/* Parsing Expressions unary < Functions unary-call
-    return primary();
-*/
 //> Functions unary-call
     return call();
 //< Functions unary-call
@@ -647,9 +554,11 @@ private Stmt declaration() {
     if (match(TRUE)) return new Expr.Literal(true);
     if (match(NIL)) return new Expr.Literal(null);
 
-    /* Chapter 10. Q.2
-    if (match(FUN)) return functionBody("function");
-    */ 
+    // Chapter 10. Q.2: "fun" NOT followed by identifier is an anonymous function
+    if (check(FUN) && !checkNext(IDENTIFIER)) {
+      advance(); // consume "fun"
+      return functionBody("function");
+    }
 
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
@@ -712,11 +621,6 @@ private Stmt declaration() {
     }
 //< Statements and State parse-identifier
 
-    if (match(LEFT_PAREN)) {
-      Expr expr = expression();
-      consume(RIGHT_PAREN, "Expect ')' after expression.");
-      return new Expr.Grouping(expr);
-    }
 //> primary-error
 
     throw error(peek(), "Expect expression.");
@@ -790,6 +694,8 @@ private Stmt declaration() {
         case PRINT:
         case RETURN:
           return;
+        default:
+          break;
       }
 
       advance();
