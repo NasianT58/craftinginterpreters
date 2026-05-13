@@ -398,6 +398,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
         return (double)left - (double)right;
 //> binary-plus
       case PLUS:
+        // Chapter 7 Question 2:
         // checks if EITHER  operand is a string
         if (left instanceof String || right instanceof String) {
           // Converts both operands to strings
@@ -426,7 +427,7 @@ private final Map<Expr, int[]> locals = new HashMap<>();
       case SLASH:
 //> check-slash-operand
         checkNumberOperands(expr.operator, left, right);
-        // implement run time error for division by zero
+        // Chapter 7 Question 3: implement run time error for division by zero
         if ((double) right == 0) {
           throw new RuntimeError(expr.operator, "Division by zero.");
         }

@@ -168,6 +168,8 @@ typedef struct {
   Obj obj;
   ObjString* name;
 //> Methods and Initializers class-methods
+// Chapter 28 Question 1: add initializer
+  Value initializer;
   Table methods;
 //< Methods and Initializers class-methods
 } ObjClass;

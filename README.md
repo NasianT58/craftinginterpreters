@@ -2,7 +2,7 @@
 
 Forked Repository From: https://github.com/munificent/craftinginterpreters
 
-Using this fork to turn in homework for the challenge questions for CS 4080.
+Using this fork to turn in homework for the challenge questions and to follow the textbook for CS 4080.
 
 In my Commit Messages: Shows the Chapter and Question, along with the files added/changed for answering the questions.
 

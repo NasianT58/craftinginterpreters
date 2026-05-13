@@ -269,6 +269,7 @@ void freeVM() {
   freeObjects();
 //< Strings call-free-objects
 }
+
 //> push
 void push(Value value) {
   // Chapter 26 Question 3: Pushes trigger a reference count increase
@@ -309,8 +310,8 @@ Value pop() {
   return vm.stack[vm.stackCount];
 }
 */
-
 //< pop
+
 //> Types of Values peek
 static Value peek(int distance) {
   return vm.stackTop[-1 - distance];
@@ -366,15 +367,14 @@ static bool callValue(Value callee, int argCount) {
       }
 //< Methods and Initializers call-bound-method
 //> Classes and Instances call-class
-      case OBJ_CLASS: {
+case OBJ_CLASS: {
         ObjClass* klass = AS_CLASS(callee);
         vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
 //> Methods and Initializers call-init
-        Value initializer;
-        if (tableGet(&klass->methods, OBJ_VAL(vm.initString),
-                     &initializer)) {
+        // Chapter 28 Question 1: Replace looking up init via tableGet
+        if (!IS_NIL(klass->initializer)) {
           // Chapter 25 Question 1: Change initializer call signature
-          return callClosure(AS_CLOSURE(initializer), argCount);
+          return callClosure(AS_CLOSURE(klass->initializer), argCount);
 //> no-init-arity-error
         } else if (argCount != 0) {
           runtimeError("Expected 0 arguments but got %d.",
@@ -526,6 +526,8 @@ static void defineMethod(ObjString* name) {
   Value method = peek(0);
   ObjClass* klass = AS_CLASS(peek(1));
   tableSet(&klass->methods, OBJ_VAL(name), method);
+  // Chapter 28 Question 1: Handles method binding
+  if (name == vm.initString) klass->initializer = method;
   pop();
 }
 //< Methods and Initializers define-method
