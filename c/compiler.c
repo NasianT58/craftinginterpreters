@@ -455,6 +455,8 @@ static void conditional(bool canAssign);
 static bool isConstGlobal(Token* name);
 // Chapter 23 Question 2:
 static void continueStatement();
+// Chapter 29 Question 3: add declaration for inner
+static void inner_(bool canAssign);
 
 //< Compiling Expressions forward-declarations
 //> Global Variables identifier-constant
@@ -951,13 +953,28 @@ static void this_(bool canAssign) {
   
 //< this-outside-class
   variable(false);
-} // [this]
-//< Methods and Initializers this
-//> Compiling Expressions unary
-/* Compiling Expressions unary < Global Variables unary
-static void unary() {
-*/
-//> Global Variables unary
+} 
+
+// Chapter 29 Question 3: Add inner_() function
+// Chapter 29 Question 3: Add inner_()
+static void inner_(bool canAssign) {
+  (void)canAssign;
+  if (currentClass == NULL ||
+      (current->type != TYPE_METHOD && current->type != TYPE_INITIALIZER)) {
+    error("Can't use 'inner' outside of a method.");
+    return;
+  }
+
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'inner'.");
+  emitBytes(OP_GET_LOCAL, 0);
+  uint8_t argCount = argumentList();
+
+  ObjString* name = current->function->name;
+  uint8_t nameConst = makeConstant(OBJ_VAL(name));
+  emitBytes(OP_INNER, nameConst);
+  emitByte(argCount);
+}
+
 static void unary(bool canAssign) {
 //< Global Variables unary
   TokenType operatorType = parser.previous.type;
@@ -1085,6 +1102,8 @@ ParseRule rules[] = {
 */
 //> Methods and Initializers table-this
   [TOKEN_THIS]          = {this_,    NULL,   PREC_NONE},
+// Chapter 29 Question 3: Add TOKEN_INNER to parse rule table
+  [TOKEN_INNER]         = {inner_,   NULL,   PREC_NONE},
 //< Methods and Initializers table-this
 /* Compiling Expressions rules < Types of Values table-true
   [TOKEN_TRUE]          = {NULL,     NULL,   PREC_NONE},

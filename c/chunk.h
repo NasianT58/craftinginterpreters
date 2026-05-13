@@ -89,6 +89,8 @@ typedef enum {
 //< Methods and Initializers invoke-op
 //> Superclasses super-invoke-op
   OP_SUPER_INVOKE,
+// Chapter 29 Question 3: Add OP_INNER
+  OP_INNER,
 //< Superclasses super-invoke-op
 //> Closures closure-op
   OP_CLOSURE,

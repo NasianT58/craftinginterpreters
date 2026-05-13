@@ -212,6 +212,9 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 //> Superclasses disassemble-super-invoke
     case OP_SUPER_INVOKE:
       return invokeInstruction("OP_SUPER_INVOKE", chunk, offset);
+    // Chapter 29 Question 3: add OP_INNER case
+    case OP_INNER:
+      return invokeInstruction("OP_INNER", chunk, offset);
 //< Superclasses disassemble-super-invoke
 //> Closures disassemble-closure
     case OP_CLOSURE: {

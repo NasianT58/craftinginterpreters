@@ -529,8 +529,21 @@ static void closeUpvalues(Value* last) {
 static void defineMethod(ObjString* name) {
   Value method = peek(0);
   ObjClass* klass = AS_CLASS(peek(1));
-  tableSet(&klass->methods, OBJ_VAL(name), method);
-  // Chapter 28 Question 1: Handles method binding
+  ObjClosure* closure = AS_CLOSURE(method);
+
+  // Chapter 29 Question 3: tag the closure
+  closure->owner = klass;
+
+  // Chapter 29 Question 3: always record locally
+  tableSet(&klass->ownMethods, OBJ_VAL(name), method);
+  Value existing;
+
+  if (!tableGet(&klass->methods, OBJ_VAL(name), &existing)) {
+    // Chapter 29 Question 3: dispatch: super wins
+    tableSet(&klass->methods, OBJ_VAL(name), method); 
+  }
+
+  // Chapter 28 Question 1: cache initializer directly on class
   if (name == vm.initString) klass->initializer = method;
   pop();
 }
@@ -713,33 +726,19 @@ static InterpretResult run() {
         printValue(constant);
         printf("\n");
 */
-//> push-constant
         push(constant);
-//< push-constant
         break;
       }
-//< op-constant
-//> Types of Values interpret-literals
       case OP_NIL: push(NIL_VAL); break;
       case OP_TRUE: push(BOOL_VAL(true)); break;
       case OP_FALSE: push(BOOL_VAL(false)); break;
-//< Types of Values interpret-literals
-//> Global Variables interpret-pop
       case OP_POP: pop(); break;
-// Chapter 23 Question 1: Add a case for OP_DUP
       case OP_DUP:
         push(peek(0));
         break;
-//< Global Variables interpret-pop
-//> Local Variables interpret-get-local
       case OP_GET_LOCAL: {
         uint8_t slot = READ_BYTE();
-/* Local Variables interpret-get-local < Calls and Functions push-local
-        push(vm.stack[slot]); // [slot]
-*/
-//> Calls and Functions push-local
         push(frame->slots[slot]);
-//< Calls and Functions push-local
         break;
       }
       // Chapter 22 Question 4: add OP_GET_LOCAL_LONG case
@@ -748,16 +747,9 @@ static InterpretResult run() {
         push(frame->slots[slot]);
         break;
       }
-//< Local Variables interpret-get-local
-//> Local Variables interpret-set-local
       case OP_SET_LOCAL: {
         uint8_t slot = READ_BYTE();
-/* Local Variables interpret-set-local < Calls and Functions set-local
-        vm.stack[slot] = peek(0);
-*/
-//> Calls and Functions set-local
         frame->slots[slot] = peek(0);
-//< Calls and Functions set-local
         break;
       }
       // Chapter 22 Question 4: add OP_SET_LOCAL_LONG case
@@ -766,8 +758,6 @@ static InterpretResult run() {
         frame->slots[slot] = peek(0);
         break;
       }
-//< Local Variables interpret-set-local
-//> Global Variables interpret-get-global
       case OP_GET_GLOBAL: {
         ObjString* name = READ_STRING();
         Value value;
@@ -780,16 +770,12 @@ static InterpretResult run() {
         push(value);
         break;
       }
-//< Global Variables interpret-get-global
-//> Global Variables interpret-define-global
       case OP_DEFINE_GLOBAL: {
         ObjString* name = READ_STRING();
         tableSet(&vm.globals, OBJ_VAL(name), peek(0));
         pop();
         break;
       }
-//< Global Variables interpret-define-global
-//> Global Variables interpret-set-global
       case OP_SET_GLOBAL: {
         ObjString* name = READ_STRING();
         if (tableSet(&vm.globals, OBJ_VAL(name), peek(0))) {
@@ -801,32 +787,23 @@ static InterpretResult run() {
         }
         break;
       }
-//< Global Variables interpret-set-global
-//> Closures interpret-get-upvalue
       case OP_GET_UPVALUE: {
         uint8_t slot = READ_BYTE();
         // Chapter 25 Question 1: Fix OP_GET_UPVALUE
         push(*((ObjClosure*)frame->function)->upvalues[slot]->location);
         break;
       }
-//< Closures interpret-get-upvalue
-//> Closures interpret-set-upvalue
       case OP_SET_UPVALUE: {
         uint8_t slot = READ_BYTE();
         // Chapter 25 Question 1: Fix OP_SET_UPVALUE
         *((ObjClosure*)frame->function)->upvalues[slot]->location = peek(0);
         break;
       }
-//< Closures interpret-set-upvalue
-//> Classes and Instances interpret-get-property
       case OP_GET_PROPERTY: {
-//> get-not-instance
         if (!IS_INSTANCE(peek(0))) {
           runtimeError("Only instances have properties.");
           return INTERPRET_RUNTIME_ERROR;
         }
-
-//< get-not-instance
         ObjInstance* instance = AS_INSTANCE(peek(0));
         ObjString* name = READ_STRING();
         
@@ -836,30 +813,16 @@ static InterpretResult run() {
           push(value);
           break;
         }
-//> get-undefined
-
-//< get-undefined
-/* Classes and Instances get-undefined < Methods and Initializers get-method
-        runtimeError("Undefined property '%s'.", name->chars);
-        return INTERPRET_RUNTIME_ERROR;
-*/
-//> Methods and Initializers get-method
         if (!bindMethod(instance->klass, name)) {
           return INTERPRET_RUNTIME_ERROR;
         }
         break;
-//< Methods and Initializers get-method
       }
-//< Classes and Instances interpret-get-property
-//> Classes and Instances interpret-set-property
       case OP_SET_PROPERTY: {
-//> set-not-instance
         if (!IS_INSTANCE(peek(1))) {
           runtimeError("Only instances have fields.");
           return INTERPRET_RUNTIME_ERROR;
         }
-
-//< set-not-instance
         ObjInstance* instance = AS_INSTANCE(peek(1));
         tableSet(&instance->fields, OBJ_VAL(READ_STRING()), peek(0));
         Value value = pop();
@@ -867,8 +830,6 @@ static InterpretResult run() {
         push(value);
         break;
       }
-//< Classes and Instances interpret-set-property
-//> Superclasses interpret-get-super
       case OP_GET_SUPER: {
         ObjString* name = READ_STRING();
         ObjClass* superclass = AS_CLASS(pop());
@@ -878,36 +839,15 @@ static InterpretResult run() {
         }
         break;
       }
-//< Superclasses interpret-get-super
-//> Types of Values interpret-equal
       case OP_EQUAL: {
         Value b = pop();
         Value a = pop();
         push(BOOL_VAL(valuesEqual(a, b)));
         break;
       }
-//< Types of Values interpret-equal
-//> Types of Values interpret-comparison
+
       case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
       case OP_LESS:     BINARY_OP(BOOL_VAL, <); break;
-//< Types of Values interpret-comparison
-/* A Virtual Machine op-binary < Types of Values op-arithmetic
-      case OP_ADD:      BINARY_OP(+); break;
-      case OP_SUBTRACT: BINARY_OP(-); break;
-      case OP_MULTIPLY: BINARY_OP(*); break;
-      case OP_DIVIDE:   BINARY_OP(/); break;
-*/
-/* A Virtual Machine op-negate < Types of Values op-negate
-      case OP_NEGATE:   push(-pop()); break;
-      Chapter 15 Question 4: Would Replace With:
-      case OP_NEGATE:
-        vm.stackTop[-1] = -vm.stackTop[-1];
-        break;
-*/
-/* Types of Values op-arithmetic < Strings add-strings
-      case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
-*/
-//> Strings add-strings
       case OP_ADD: {
         if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
           concatenate();
@@ -1106,6 +1046,8 @@ static InterpretResult run() {
         ObjClass* subclass = AS_CLASS(peek(0));
         tableAddAll(&AS_CLASS(superclass)->methods,
                     &subclass->methods);
+        // Chapter 29 Question 3: Set superclass
+        subclass->superclass = AS_CLASS(superclass);
         pop(); // Subclass.
         break;
       }
@@ -1115,9 +1057,42 @@ static InterpretResult run() {
         defineMethod(READ_STRING());
         break;
 //< Methods and Initializers interpret-method
+      // Chapter 29 Question 3: Add OP_INNER case:
+      case OP_INNER: {
+        ObjString* name = READ_STRING();
+        int argCount = READ_BYTE();
+        ObjClass* owner = ((ObjClosure*)frame->function)->owner;
+        ObjInstance* instance = AS_INSTANCE(peek(argCount));
+
+        // Walk up from receiver's class, stop just below the owner.
+        ObjClass* path[64];
+        int pathLen = 0;
+        for (ObjClass* k = instance->klass;
+             k != NULL && k != owner && pathLen < 64;
+             k = k->superclass) {
+          path[pathLen++] = k;
+        }
+
+        // Walk back down: nearest subclass first.
+        Value method;
+        bool found = false;
+        for (int i = pathLen - 1; i >= 0; i--) {
+          if (tableGet(&path[i]->ownMethods, OBJ_VAL(name), &method)) { found = true; break; }
+        }
+
+        if (!found) {           // no match: inner is a no-op
+          vm.stackTop -= argCount;
+          *(vm.stackTop - 1) = NIL_VAL;
+          break;
+        }
+        frame->ip = ip;
+        if (!callClosure(AS_CLOSURE(method), argCount)) return INTERPRET_RUNTIME_ERROR;
+        frame = &vm.frames[vm.frameCount - 1];
+        ip = frame->ip;
+        break;
+      }
     }
   }
-
 #undef READ_BYTE
 //> Jumping Back and Forth undef-read-short
 #undef READ_SHORT

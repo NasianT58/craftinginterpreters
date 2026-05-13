@@ -159,6 +159,8 @@ typedef struct {
 //> upvalue-fields
   ObjUpvalue** upvalues;
   int upvalueCount;
+  // Chapter 29 Question 3: Add struct ObjClass* owner
+  struct ObjClass* owner;
 //< upvalue-fields
 } ObjClosure;
 //< Closures obj-closure
@@ -171,6 +173,9 @@ typedef struct {
 // Chapter 28 Question 1: add initializer
   Value initializer;
   Table methods;
+  // Chapter 29 Question 3: add Table ownMethods and struct ObjClass* superclass
+  Table ownMethods;
+  struct ObjClass* superclass;
 //< Methods and Initializers class-methods
 } ObjClass;
 //< Classes and Instances obj-class

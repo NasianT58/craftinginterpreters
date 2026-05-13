@@ -54,8 +54,12 @@ ObjClass* newClass(ObjString* name) {
   klass->name = name; // [klass]
   // Chapter 28 Question 1: zero initialize initializer
   klass->initializer = NIL_VAL;
+  // Chapter 29 Question 3: Initialize new fields
+  klass->superclass = NULL;
 //> Methods and Initializers init-methods
   initTable(&klass->methods);
+  // Chapter 29 Question 3: Initialize new fields
+  initTable(&klass->ownMethods);
 //< Methods and Initializers init-methods
   return klass;
 }
@@ -75,6 +79,8 @@ ObjClosure* newClosure(ObjFunction* function) {
 //> init-upvalue-fields
   closure->upvalues = upvalues;
   closure->upvalueCount = function->upvalueCount;
+  // Chapter 29 Question 3: Initialize owner
+  closure->owner = NULL;
 //< init-upvalue-fields
   return closure;
 }
