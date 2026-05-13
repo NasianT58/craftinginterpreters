@@ -377,8 +377,13 @@ case OBJ_CLASS: {
 //> Methods and Initializers call-init
         // Chapter 28 Question 1: Replace looking up init via tableGet
         if (!IS_NIL(klass->initializer)) {
-          // Chapter 25 Question 1: Change initializer call signature
-          return callClosure(AS_CLOSURE(klass->initializer), argCount);
+          // Chapter 25 Question 1:
+          // Chapter 28 Question 1: handle both closure and plain function
+          if (IS_CLOSURE(klass->initializer)) {
+            return callClosure(AS_CLOSURE(klass->initializer), argCount);
+          } else {
+            return callFunction(AS_FUNCTION(klass->initializer), argCount);
+          }
 //> no-init-arity-error
         } else if (argCount != 0) {
           runtimeError("Expected 0 arguments but got %d.",
@@ -435,8 +440,12 @@ static bool invokeFromClass(ObjClass* klass, ObjString* name,
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
-  // Chapter 25 Question 1: Change invokeFromClass call signature
-  return callClosure(AS_CLOSURE(method), argCount);
+  // Chapter 25 Question 1: Change invokeFromClass call signature and handle both closure and plain function
+  if (IS_CLOSURE(method)) {
+    return callClosure(AS_CLOSURE(method), argCount);
+  } else {
+    return callFunction(AS_FUNCTION(method), argCount);
+  }
 }
 //< Methods and Initializers invoke-from-class
 //> Methods and Initializers invoke
@@ -471,8 +480,15 @@ static bool bindMethod(ObjClass* klass, ObjString* name) {
     return false;
   }
 
-  ObjBoundMethod* bound = newBoundMethod(peek(0),
-                                         AS_CLOSURE(method));
+  // Chapter 29 Question 3: handle both closure and plain function
+  ObjClosure* closure;
+  if (IS_CLOSURE(method)) {
+    closure = AS_CLOSURE(method);
+  } else {
+    closure = newClosure(AS_FUNCTION(method));
+  }
+
+  ObjBoundMethod* bound = newBoundMethod(peek(0), closure);
   pop();
   push(OBJ_VAL(bound));
   return true;
@@ -529,18 +545,19 @@ static void closeUpvalues(Value* last) {
 static void defineMethod(ObjString* name) {
   Value method = peek(0);
   ObjClass* klass = AS_CLASS(peek(1));
-  ObjClosure* closure = AS_CLOSURE(method);
 
-  // Chapter 29 Question 3: tag the closure
-  closure->owner = klass;
-
-  // Chapter 29 Question 3: always record locally
-  tableSet(&klass->ownMethods, OBJ_VAL(name), method);
-  Value existing;
-
-  if (!tableGet(&klass->methods, OBJ_VAL(name), &existing)) {
-    // Chapter 29 Question 3: dispatch: super wins
-    tableSet(&klass->methods, OBJ_VAL(name), method); 
+  // Chapter 29 Question 3: only tag if it's actually a closure
+  if (IS_CLOSURE(method)) {
+    ObjClosure* closure = AS_CLOSURE(method);
+    closure->owner = klass;
+    tableSet(&klass->ownMethods, OBJ_VAL(name), method);
+    Value existing;
+    if (!tableGet(&klass->methods, OBJ_VAL(name), &existing)) {
+      tableSet(&klass->methods, OBJ_VAL(name), method);
+    }
+  } else {
+    // Chapter 29 Question 3: plain function (no upvalues), store normally
+    tableSet(&klass->methods, OBJ_VAL(name), method);
   }
 
   // Chapter 28 Question 1: cache initializer directly on class

@@ -211,7 +211,6 @@ ObjString* tableFindString(Table* table, const char* chars,
     index = (index + 1) % table->capacity;
 */
 //> Optimization find-string-next
-    index = (index + 1) & (table->capacity - 1);
 //< Optimization find-string-next
   }
 }

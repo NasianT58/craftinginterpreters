@@ -88,6 +88,9 @@ typedef enum {
 } ObjType;
 //< obj-type
 
+// Chapter 29 Question 3: Forward declaration for ObjClass
+typedef struct ObjClass ObjClass;
+
 struct Obj {
   ObjType type;
 //> Garbage Collection is-marked-field
@@ -160,13 +163,13 @@ typedef struct {
   ObjUpvalue** upvalues;
   int upvalueCount;
   // Chapter 29 Question 3: Add struct ObjClass* owner
-  struct ObjClass* owner;
+  ObjClass* owner;
 //< upvalue-fields
 } ObjClosure;
 //< Closures obj-closure
 //> Classes and Instances obj-class
 
-typedef struct {
+typedef struct ObjClass {
   Obj obj;
   ObjString* name;
 //> Methods and Initializers class-methods
@@ -175,7 +178,7 @@ typedef struct {
   Table methods;
   // Chapter 29 Question 3: add Table ownMethods and struct ObjClass* superclass
   Table ownMethods;
-  struct ObjClass* superclass;
+  ObjClass* superclass;
 //< Methods and Initializers class-methods
 } ObjClass;
 //< Classes and Instances obj-class

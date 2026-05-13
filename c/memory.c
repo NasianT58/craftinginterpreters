@@ -116,6 +116,7 @@ static void blackenObject(Obj* object) {
     case OBJ_CLASS: {
       ObjClass* klass = (ObjClass*)object;
       markObject((Obj*)klass->name);
+       markTable(&klass->ownMethods); // Chapter 29 Question 3
 //> Methods and Initializers mark-methods
       markTable(&klass->methods);
 //< Methods and Initializers mark-methods
@@ -178,6 +179,7 @@ static void freeObject(Obj* object) {
 //> Methods and Initializers free-methods
       ObjClass* klass = (ObjClass*)object;
       freeTable(&klass->methods);
+      freeTable(&klass->ownMethods); // Chapter 29 Question 3
 //< Methods and Initializers free-methods
       FREE(ObjClass, object);
       break;
@@ -291,6 +293,7 @@ static void traceReferences() {
 //< Garbage Collection trace-references
 //> Garbage Collection sweep
 
+/*
 static void sweep() {
   Obj* previous = NULL;
   Obj* object = vm.objects;
@@ -312,11 +315,43 @@ static void sweep() {
     }
   }
 }
+*/
+
+// Chapter 26 Question 3: Revereted Sweep() Changes because
+// implementation is fundamentally incompatible with existing GC
+// without a complete redesign
+static void sweep() {
+  Obj* previous = NULL;
+  Obj* object = vm.objects;
+  while (object != NULL) {
+    if (object->isMarked) {
+      object->isMarked = false;
+      previous = object;
+      object = object->next;
+    } else {
+      Obj* unreached = object;
+      object = object->next;
+      if (previous != NULL) {
+        previous->next = object;
+      } else {
+        vm.objects = object;
+      }
+      freeObject(unreached);
+    }
+  }
+}
+
+// Chapter 26 Question 3: incRef/decRef implemented but disabled
+// due to incompatibility with mark-and-sweep GC. Full ref counting
+// would require replacing the GC entirely rather than augmenting it.
 
 // Chapter 26 Question 3: Add Functions: incRef(), decrementValue(), decRef()
 void incRef(Obj* value) {
   (void)value; // no-op
 }
+
+/* Chapter 26 Question 3: Added functions, removed because incompatible and unused
+
 static void decrementValue(Value value) {
   if (IS_OBJ(value)) decRef(AS_OBJ(value));
 }
@@ -326,7 +361,9 @@ static void decrementArray(ValueArray* value_array) {
     decrementValue(value_array->values[i]);
   }
 }
+*/
 
+/*
 void decRef(Obj* value) {
   value->refCount--;
   if (value->refCount > 0) return;
@@ -368,6 +405,12 @@ void decRef(Obj* value) {
       break;
   }
 }
+*/
+
+void decRef(Obj* value) {
+  (void)value; // no-op
+}
+
 
 //< Garbage Collection sweep
 //> Garbage Collection collect-garbage
