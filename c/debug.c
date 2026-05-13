@@ -58,8 +58,8 @@ static int byteInstruction(const char* name, Chunk* chunk,
 // Chapter 22 Question 4: Implement shortInstruction
 static int shortInstruction(const char* name, Chunk* chunk, int offset) {
   uint16_t slot = (uint16_t)(chunk->code[offset + 1] << 8);
-  slot != chunk->code[offset + 2];
-  printf("%-16s $4d\n", name, slot);
+  slot = chunk->code[offset + 2];
+  printf("%-16s %4d\n", name, slot);
   return offset + 3;
 }
 //< Local Variables byte-instruction

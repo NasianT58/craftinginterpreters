@@ -290,6 +290,7 @@ static void traceReferences() {
 }
 //< Garbage Collection trace-references
 //> Garbage Collection sweep
+
 static void sweep() {
   Obj* previous = NULL;
   Obj* object = vm.objects;
@@ -314,9 +315,8 @@ static void sweep() {
 
 // Chapter 26 Question 3: Add Functions: incRef(), decrementValue(), decRef()
 void incRef(Obj* value) {
-  value->refCount++;
+  (void)value; // no-op
 }
-
 static void decrementValue(Value value) {
   if (IS_OBJ(value)) decRef(AS_OBJ(value));
 }
@@ -328,34 +328,44 @@ static void decrementArray(ValueArray* value_array) {
 }
 
 void decRef(Obj* value) {
-  if (value->refCount > 1) {
-    value->refCount--;
-  } else {
-    // Decrement refVal of objects referenced by the current object
-    switch (value->type) {
-      case OBJ_FUNCTION: {
-        ObjFunction* function = (ObjFunction*)value;
-        if (function->name != NULL) decRef((Obj*)function->name);
-        decrementArray(&function->chunk.constants);
-        break;
-      }
-      case OBJ_UPVALUE: {
-        ObjUpvalue* upvalue = (ObjUpvalue*)value;
-        decrementValue(upvalue->closed);
-        break;
-      }
-      case OBJ_CLOSURE: {
-        ObjClosure* closure = (ObjClosure*)value;
-        decRef((Obj*)closure->function);
-        for (int i = 0; i < closure->upvalueCount; i++) {
-          decRef((Obj*)closure->upvalues[i]);
-        }
-        break;
-      }
-      case OBJ_NATIVE:
-      case OBJ_STRING:
-        break;
+  value->refCount--;
+  if (value->refCount > 0) return;
+
+  // refCount hit 0, decrement children
+  switch (value->type) {
+    case OBJ_FUNCTION: {
+      ObjFunction* function = (ObjFunction*)value;
+      if (function->name != NULL) decRef((Obj*)function->name);
+      decrementArray(&function->chunk.constants);
+      break;
     }
+    case OBJ_UPVALUE: {
+      ObjUpvalue* upvalue = (ObjUpvalue*)value;
+      decrementValue(upvalue->closed);
+      break;
+    }
+    case OBJ_CLOSURE: {
+      ObjClosure* closure = (ObjClosure*)value;
+      decRef((Obj*)closure->function);
+      for (int i = 0; i < closure->upvalueCount; i++) {
+        decRef((Obj*)closure->upvalues[i]);
+      }
+      break;
+    }
+    case OBJ_CLASS: {
+      ObjClass* klass = (ObjClass*)value;
+      decRef((Obj*)klass->name);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      ObjInstance* instance = (ObjInstance*)value;
+      decRef((Obj*)instance->klass);
+      break;
+    }
+    case OBJ_NATIVE:
+    case OBJ_STRING:
+    case OBJ_BOUND_METHOD:
+      break;
   }
 }
 

@@ -132,5 +132,6 @@ uint32_t hashValue(Value value) {
     case VAL_NUMBER: return hashDouble(AS_NUMBER(value));
     case VAL_OBJ:    return AS_STRING(value)->hash;
     case VAL_EMPTY:  return 0;
+    default:         return 0;
   }
 }

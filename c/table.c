@@ -78,7 +78,7 @@ bool tableGet(Table* table, Value key, Value* value) { // was: Table* table, Obj
   if (table->count == 0) return false;
 
   Entry* entry = findEntry(table->entries, table->capacity, key);
-  if (IS_EMPTY(entry->key) == NULL) return false; // was: entry->key == NULL
+  if (IS_EMPTY(entry->key)) return false; // was: entry->key == NULL
 
   *value = entry->value;
   return true;
@@ -99,7 +99,7 @@ static void adjustCapacity(Table* table, int capacity) {
 //< resize-init-count
   for (int i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
-    if (IS_EMPTY(entry->key) == NULL) continue; // was: entry->key == NULL
+    if (IS_EMPTY(entry->key)) continue; // was: entry->key == NULL
 
     Entry* dest = findEntry(entries, capacity, entry->key);
     dest->key = entry->key;

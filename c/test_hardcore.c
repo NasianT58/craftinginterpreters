@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "memory_hardcore.h"
 
-int main(void) {
+int test_hardcore_main(void) { 
   assert(hardcore_allocator_init(256));
   printf("init ok (256 bytes)\n");
 

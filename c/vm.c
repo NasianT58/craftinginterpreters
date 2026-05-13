@@ -124,7 +124,7 @@ static void runtimeError(const char* format, ...) {
 //< Closures runtime-error-function
     size_t instruction = frame->ip - function->chunk.code - 1;
     fprintf(stderr, "[line %d] in ", // [minus]
-            function->chunk.lines[instruction]);
+        function->chunk.lines[instruction].line);;
     if (function->name == NULL) {
       fprintf(stderr, "script\n");
     } else {
@@ -140,58 +140,62 @@ static void runtimeError(const char* format, ...) {
 static void defineNative(const char* name, NativeFn function) {
   push(OBJ_VAL(copyString(name, (int)strlen(name))));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&vm.globals, OBJ_VAL(AS_STRING(vm.stack[0])), vm.stack[1]);
+  tableSet(&vm.globals, OBJ_VAL(AS_STRING(vm.stackTop[-2])), vm.stackTop[-1]);
   pop();
   pop();
 }
 //< Calls and Functions define-native
 
 // Chapter 27 Question 1: Add native function hasFieldNative()
-static Value hasFieldNative(int argCount, Value* args) {
-  if (argCount != 2) return NIL_VAL;
-  if (!IS_INSTANCE(args[0])) return NIL_VAL;
-  if (!IS_STRING(args[1])) return NIL_VAL;
-
+static bool hasFieldNative(int argCount, Value* args) {
+  if (argCount != 2 || !IS_INSTANCE(args[0]) || !IS_STRING(args[1])) {
+    args[-1] = NIL_VAL;
+    return true;
+  }
   ObjInstance* instance = AS_INSTANCE(args[0]);
   Value dummy;
   // Chapter 27 Question 1: key is now Value, not ObjString*
-  return BOOL_VAL(tableGet(&instance->fields, args[1], &dummy));
+  args[-1] = BOOL_VAL(tableGet(&instance->fields, args[1], &dummy));
+  return true;
 }
 
 // Chapter 27 Question 2: Add native functions getFieldNative(), setFieldNative()
-static Value getFieldNative(int argCount, Value* args) {
-  if (argCount != 2) return NIL_VAL;
-  if (!IS_INSTANCE(args[0])) return NIL_VAL;
-  if (!IS_STRING(args[1])) return NIL_VAL;
-
+static bool getFieldNative(int argCount, Value* args) {
+  if (argCount != 2 || !IS_INSTANCE(args[0]) || !IS_STRING(args[1])) {
+    args[-1] = NIL_VAL;
+    return true;
+  }
   ObjInstance* instance = AS_INSTANCE(args[0]);
   Value value;
   // Chapter 27 Question 2: key is now Value not ObjString* from previous challenge problem
   tableGet(&instance->fields, args[1], &value);
-  return value;
+  args[-1] = value;
+  return true;
 }
 
-static Value setFieldNative(int argCount, Value* args) {
-  if (argCount != 3) return NIL_VAL;
-  if (!IS_INSTANCE(args[0])) return NIL_VAL;
-  if (!IS_STRING(args[1])) return NIL_VAL;
-
+static bool setFieldNative(int argCount, Value* args) {
+  if (argCount != 3 || !IS_INSTANCE(args[0]) || !IS_STRING(args[1])) {
+    args[-1] = NIL_VAL;
+    return true;
+  }
   ObjInstance* instance = AS_INSTANCE(args[0]);
   // Chapter 27 Question 2: key is now Value not ObjString* from previous challenge problem
   tableSet(&instance->fields, args[1], args[2]);
-  return args[2];
+  args[-1] = args[2];
+  return true;
 }
 
 // Chapter 27 Question 3: add native function deleteFieldNative()
-static Value deleteFieldNative(int argCount, Value* args) {
-  if (argCount != 2) return NIL_VAL;
-  if (!IS_INSTANCE(args[0])) return NIL_VAL;
-  if (!IS_STRING(args[1])) return NIL_VAL;
-
+static bool deleteFieldNative(int argCount, Value* args) {
+  if (argCount != 2 || !IS_INSTANCE(args[0]) || !IS_STRING(args[1])) {
+    args[-1] = NIL_VAL;
+    return true;
+  }
   ObjInstance* instance = AS_INSTANCE(args[0]);
   // Chapter 27 Question 3: key is now Value not ObjString* from previous challenge problem
   tableDelete(&instance->fields, args[1]);
-  return NIL_VAL;
+  args[-1] = NIL_VAL;
+  return true;
 }
 
 void initVM() {
@@ -232,7 +236,7 @@ void initVM() {
   defineNative("type", typeNative);
 //< Calls and Functions define-native-clock
 // Chapter 27 Quetion 1: Define native function
-defineNative("hasField", hasFieldNative);
+  defineNative("hasField", hasFieldNative);
 // Chapter 27 Question 2: Define other Natives
   defineNative("getField", getFieldNative);
   defineNative("setField", setFieldNative);
@@ -298,8 +302,8 @@ void push(Value value) {
 //> pop
 Value pop() {
   // Chapter 26 Question 3: Pops trigger a reference count decrease
-  if (IS_OBJ(*vm.stackTop)) decRef(AS_OBJ(*vm.stackTop));
   vm.stackTop--;
+  if (IS_OBJ(*vm.stackTop)) decRef(AS_OBJ(*vm.stackTop));
   return *vm.stackTop;
 }
 
@@ -615,7 +619,7 @@ static InterpretResult run() {
 
 // Chapter 22 Question 4: Add macro
 #define READ_SLOT_LONG() \
-  (uint16_t)((READ_BYTE() << 8) | READ_BYTE())
+  (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
 
 /* Jumping Back and Forth read-short < Calls and Functions run
 #define READ_SHORT() \
