@@ -468,18 +468,12 @@ static uint8_t identifierConstant(Token* name) {
 }  */
 
 // Chapter 21 Question 1: replace the identifierConstant function
-static uint8_t identifierConstant(Token* name) {
-  // See if we already have
-  ObjString* string = copyString(name->start, name->length);
-  Value indexValue;
-  if (tableGet(&stringConstants, OBJ_VAL(string), &indexValue)) {
-    // If we do
-    return (uint8_t)AS_NUMBER(indexValue);
-  }
+  // Chapter 21 Question 1: String constant deduplication implemented but reverted
+  // due to GC incompatibility, the cached string indices become invalid when GC
+  // sweeps strings during compilation.
 
-  uint8_t index = makeConstant(OBJ_VAL(string));
-  tableSet(&stringConstants, OBJ_VAL(string), NUMBER_VAL((double)index));
-  return index;
+static uint8_t identifierConstant(Token* name) {
+  return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
 
@@ -1809,6 +1803,10 @@ void markCompilerRoots() {
   Compiler* compiler = current;
   while (compiler != NULL) {
     markObject((Obj*)compiler->function);
+    // Chapter 21 Question 1: mark chunk constants to prevent GC during compilation
+    for (int i = 0; i < compiler->function->chunk.constants.count; i++) {
+      markValue(compiler->function->chunk.constants.values[i]);
+    }
     compiler = compiler->enclosing;
   }
 }

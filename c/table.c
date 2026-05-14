@@ -178,40 +178,23 @@ ObjString* tableFindString(Table* table, const char* chars,
                            int length, uint32_t hash) {
   if (table->count == 0) return NULL;
 
-/* Hash Tables table-find-string < Optimization find-string-index
-  uint32_t index = hash % table->capacity;
-*/
-//> Optimization find-string-index
   uint32_t index = hash & (table->capacity - 1);
-//< Optimization find-string-index
   for (;;) {
     Entry* entry = &table->entries[index];
-    /* 
-    if (entry->key == NULL) {
-      // Stop if we find an empty non-tombstone entry.
+
+    if (IS_EMPTY(entry->key)) {
+      // Stop only if it's a truly empty entry (not a tombstone)
       if (IS_NIL(entry->value)) return NULL;
-    } else if (entry->key->length == length &&
-        entry->key->hash == hash &&
-        memcmp(entry->key->chars, chars, length) == 0) {
-      // We found it.
-      return entry->key;
-    } */
-
-    if (IS_EMPTY(entry->key)) return NULL;  // was: entry->key == NULL
-
-    ObjString* string = AS_STRING(entry->key);  // unwrap Value to ObjString*
-    if (string->length == length &&
-        memcmp(string->chars, chars, length) == 0) {
-      return string;
+    } else {
+      ObjString* string = AS_STRING(entry->key);
+      if (string->length == length &&
+          string->hash == hash &&
+          memcmp(string->chars, chars, length) == 0) {
+        return string;
+      }
     }
 
-    index = (index + 1) % table->capacity;
-
-/* Hash Tables table-find-string < Optimization find-string-next
-    index = (index + 1) % table->capacity;
-*/
-//> Optimization find-string-next
-//< Optimization find-string-next
+    index = (index + 1) & (table->capacity - 1); // only one increment
   }
 }
 //< table-find-string

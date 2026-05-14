@@ -130,7 +130,11 @@ uint32_t hashValue(Value value) {
     case VAL_BOOL:   return AS_BOOL(value) ? 3 : 5;
     case VAL_NIL:    return 7;
     case VAL_NUMBER: return hashDouble(AS_NUMBER(value));
-    case VAL_OBJ:    return AS_STRING(value)->hash;
+    case VAL_OBJ: {
+      if (IS_STRING(value)) return AS_STRING(value)->hash;
+      // For non-string objects, hash the pointer
+      return (uint32_t)(uintptr_t)AS_OBJ(value);
+    }
     case VAL_EMPTY:  return 0;
     default:         return 0;
   }
