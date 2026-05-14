@@ -16,40 +16,40 @@ public class GenerateAst {
 //> call-define-ast
     defineAst(outputDir, "Expr", Arrays.asList(
 //> Statements and State assign-expr
-      "Assign   : Token name, Expr value",
+      "Assign      : Token name, Expr value",
 //< Statements and State assign-expr
-      "Binary   : Expr left, Token operator, Expr right",
+      "Binary      : Expr left, Token operator, Expr right",
 //> Functions call-expr
-      "Call     : Expr callee, Token paren, List<Expr> arguments",
+      "Call        : Expr callee, Token paren, List<Expr> arguments",
 //< Functions call-expr
+      // Ch 6 Q.2: Ternary conditional operator
+      "Conditional : Expr condition, Expr thenBranch, Expr elseBranch",
+      // Ch 10 Q.2: Anonymous function expression
+      "Function    : List<Token> params, List<Stmt> body",
 //> Classes get-ast
-      "Get      : Expr object, Token name",
+      "Get         : Expr object, Token name",
 //< Classes get-ast
-      "Grouping : Expr expression",
-      "Literal  : Object value",
+      "Grouping    : Expr expression",
+      "Literal     : Object value",
 //> Control Flow logical-ast
-      "Logical  : Expr left, Token operator, Expr right",
+      "Logical     : Expr left, Token operator, Expr right",
 //< Control Flow logical-ast
 //> Classes set-ast
-      "Set      : Expr object, Token name, Expr value",
+      "Set         : Expr object, Token name, Expr value",
 //< Classes set-ast
 //> Inheritance super-expr
-      "Super    : Token keyword, Token method",
+      "Super       : Token keyword, Token method",
 //< Inheritance super-expr
 //> Classes this-ast
-      "This     : Token keyword",
+      "This        : Token keyword",
 //< Classes this-ast
 /* Representing Code call-define-ast < Statements and State var-expr
       "Unary    : Token operator, Expr right"
 */
 //> Statements and State var-expr
-      "Unary    : Token operator, Expr right",
-      "Variable : Token name"
+      "Unary       : Token operator, Expr right",
+      "Variable    : Token name"
 //< Statements and State var-expr
-
-/*  Ch. 10 Q. 2
-      "Function : List<Token> parameters, List<Stmt> body"
-      */
     ));
 
 //> Statements and State stmt-ast
