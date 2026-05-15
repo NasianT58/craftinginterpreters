@@ -34,7 +34,9 @@
 //> Calls and Functions is-native
 #define IS_NATIVE(value)       isObjType(value, OBJ_NATIVE)
 //< Calls and Functions is-native
-#define IS_STRING(value)       isObjType(value, OBJ_STRING)
+// Chapter 30 Question 2: string includes short string
+#define IS_STRING(value)       (isObjType(value, OBJ_STRING) || \
+                                isObjType(value, OBJ_SHORT_STRING))
 //< is-string
 //> as-string
 
@@ -49,8 +51,7 @@
 //< Closures as-closure
 //> Calls and Functions as-function
 #define AS_FUNCTION(value)     ((ObjFunction*)AS_OBJ(value))
-//< Calls and Functions as-function
-//> Classes and Instances as-instance
+//< Classes and Instances as-instance
 #define AS_INSTANCE(value)     ((ObjInstance*)AS_OBJ(value))
 //< Classes and Instances as-instance
 //> Calls and Functions as-native
@@ -59,6 +60,9 @@
 //< Calls and Functions as-native
 #define AS_STRING(value)       ((ObjString*)AS_OBJ(value))
 #define AS_CSTRING(value)      (((ObjString*)AS_OBJ(value))->chars)
+// Chapter 30 Question 2: short string macros
+#define IS_SHORT_STRING(value) isObjType(value, OBJ_SHORT_STRING)
+#define AS_SHORT_STRING(value) ((ObjShortString*)AS_OBJ(value))
 //< as-string
 //> obj-type
 
@@ -82,7 +86,9 @@ typedef enum {
   OBJ_NATIVE,
 //< Calls and Functions obj-type-native
   OBJ_STRING,
-//> Closures obj-type-upvalue
+// Chapter 30 Question 2: short string type
+  OBJ_SHORT_STRING,
+//> Closures obj-type-
   OBJ_UPVALUE
 //< Closures obj-type-upvalue
 } ObjType;
@@ -97,7 +103,7 @@ struct Obj {
   bool isMarked;
 //< Garbage Collection is-marked-field
 //> next-field
-// Chapter 26 Question 3: Add refCount
+  // Chapter 26 Question 3: Add refCount
   int refCount;
   struct Obj* next;
 //< next-field
@@ -121,7 +127,6 @@ typedef struct {
 // Chapter 24 Question 2: Modify typedef Value
 typedef bool (*NativeFn)(int argCount, Value* args);
 
-
 typedef struct {
   Obj obj;
   NativeFn function;
@@ -143,6 +148,16 @@ struct ObjString {
       // add: bool ownsChars;
 };
 //< obj-string
+
+// Chapter 30 Question 2: short string object
+#define SHORT_STRING_MAX 7
+
+typedef struct {
+  Obj obj;
+  char chars[8];
+  uint32_t hash;
+} ObjShortString;
+
 //> Closures obj-upvalue
 typedef struct ObjUpvalue {
   Obj obj;
@@ -226,6 +241,8 @@ ObjString* takeString(char* chars, int length);
 //< take-string-h
 //> copy-string-h
 ObjString* copyString(const char* chars, int length);
+// Chapter 30 Question 2: short string allocation
+ObjShortString* newShortString(const char* chars, int length, uint32_t hash);
 //> Closures new-upvalue-h
 ObjUpvalue* newUpvalue(Value* slot);
 //< Closures new-upvalue-h

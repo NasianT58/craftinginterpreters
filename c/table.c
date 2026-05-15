@@ -172,29 +172,55 @@ void tableAddAll(Table* from, Table* to) {
   }
 }
 //< table-add-all
+
+// Chapter 30 Question 2: get table string chars
+static const char* tableStringChars(ObjString* string) {
+  if (string->obj.type == OBJ_SHORT_STRING) {
+    return ((ObjShortString*)string)->chars;
+  }
+
+  return string->chars;
+}
+
+// Chapter 30 Question 2: get table string length
+static int tableStringLength(ObjString* string) {
+  if (string->obj.type == OBJ_SHORT_STRING) {
+    return (int)strlen(((ObjShortString*)string)->chars);
+  }
+
+  return string->length;
+}
+
+// Chapter 30 Question 2: get table string hash
+static uint32_t tableStringHash(ObjString* string) {
+  if (string->obj.type == OBJ_SHORT_STRING) {
+    return ((ObjShortString*)string)->hash;
+  }
+
+  return string->hash;
+}
+
 //> table-find-string
 // Chapter 20 Question 1: Update tableFindString method
 ObjString* tableFindString(Table* table, const char* chars,
                            int length, uint32_t hash) {
   if (table->count == 0) return NULL;
-
   uint32_t index = hash & (table->capacity - 1);
   for (;;) {
     Entry* entry = &table->entries[index];
-
     if (IS_EMPTY(entry->key)) {
       // Stop only if it's a truly empty entry (not a tombstone)
       if (IS_NIL(entry->value)) return NULL;
     } else {
+      // Chapter 30 Question 2: include short strings in interning lookup
       ObjString* string = AS_STRING(entry->key);
-      if (string->length == length &&
-          string->hash == hash &&
-          memcmp(string->chars, chars, length) == 0) {
+      if (tableStringLength(string) == length &&
+          tableStringHash(string) == hash &&
+          memcmp(tableStringChars(string), chars, length) == 0) {
         return string;
       }
     }
-
-    index = (index + 1) & (table->capacity - 1); // only one increment
+    index = (index + 1) & (table->capacity - 1);
   }
 }
 //< table-find-string

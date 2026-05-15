@@ -156,6 +156,8 @@ static void blackenObject(Obj* object) {
 //< blacken-upvalue
     case OBJ_NATIVE:
     case OBJ_STRING:
+    // Chapter 30 Question 2: no references in short strings
+    case OBJ_SHORT_STRING:
       break;
   }
 }
@@ -244,6 +246,10 @@ static void freeObject(Obj* object) {
           break;
         */
     }
+    // Chapter 30 Question 2: free short string
+    case OBJ_SHORT_STRING:
+      FREE(ObjShortString, object);
+      break;
 //> Closures free-upvalue
     case OBJ_UPVALUE:
       FREE(ObjUpvalue, object);
@@ -429,7 +435,7 @@ void collectGarbage() {
 //< call-mark-roots
 //> call-trace-references
   traceReferences();
-//< call-trace-references
+//< traceReferences
 //> sweep-strings
   tableRemoveWhite(&vm.strings);
 //< sweep-strings

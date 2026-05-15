@@ -26,6 +26,23 @@
 #include "vm.h"
 
 VM vm; // [one]
+
+// Chapter 30 Question 2: get chars from either string type
+static const char* getStringChars(ObjString* str) {
+  if (str->obj.type == OBJ_SHORT_STRING) {
+    return ((ObjShortString*)str)->chars;
+  }
+  return str->chars;
+}
+
+// Chapter 30 Question 2: get length from either string type
+static int getStringLength(ObjString* str) {
+  if (str->obj.type == OBJ_SHORT_STRING) {
+    return (int)strlen(((ObjShortString*)str)->chars);
+  }
+  return str->length;
+}
+
 //> Calls and Functions clock-native
 // Chapter 24 Question 2: Update clockNative
 static bool clockNative(int argCount, Value* args) {
@@ -128,7 +145,7 @@ static void runtimeError(const char* format, ...) {
     if (function->name == NULL) {
       fprintf(stderr, "script\n");
     } else {
-      fprintf(stderr, "%s()\n", function->name->chars);
+      fprintf(stderr, "%s()\n", getStringChars(function->name));
     }
   }
 
@@ -419,7 +436,7 @@ case OBJ_CLASS: {
           vm.stackTop -= argCount;
           return true;
         } else {
-          runtimeError(AS_STRING(vm.stackTop[-argCount - 1])->chars);
+          runtimeError("%s", getStringChars(AS_STRING(vm.stackTop[-argCount - 1])));
           return false;
         }
       }
@@ -437,7 +454,7 @@ static bool invokeFromClass(ObjClass* klass, ObjString* name,
                             int argCount) {
   Value method;
   if (!tableGet(&klass->methods, OBJ_VAL(name), &method)) {
-    runtimeError("Undefined property '%s'.", name->chars);
+    runtimeError("Undefined property '%s'.", getStringChars(name));
     return false;
   }
   // Chapter 25 Question 1: Change invokeFromClass call signature and handle both closure and plain function
@@ -476,7 +493,7 @@ static bool invoke(ObjString* name, int argCount) {
 static bool bindMethod(ObjClass* klass, ObjString* name) {
   Value method;
   if (!tableGet(&klass->methods, OBJ_VAL(name), &method)) {
-    runtimeError("Undefined property '%s'.", name->chars);
+    runtimeError("Undefined property '%s'.", getStringChars(name));
     return false;
   }
 
@@ -570,28 +587,27 @@ static bool isFalsey(Value value) {
   return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 //< Types of Values is-falsey
+
 //> Strings concatenate
 static void concatenate() {
-/* Strings concatenate < Garbage Collection concatenate-peek
-  ObjString* b = AS_STRING(pop());
-  ObjString* a = AS_STRING(pop());
-*/
-//> Garbage Collection concatenate-peek
   ObjString* b = AS_STRING(peek(0));
   ObjString* a = AS_STRING(peek(1));
-//< Garbage Collection concatenate-peek
 
-  int length = a->length + b->length;
+  // Chapter 30 Question 2: handle both string types
+  const char* aChars = getStringChars(a);
+  const char* bChars = getStringChars(b);
+  int aLen = getStringLength(a);
+  int bLen = getStringLength(b);
+
+  int length = aLen + bLen;
   char* chars = ALLOCATE(char, length + 1);
-  memcpy(chars, a->chars, a->length);
-  memcpy(chars + a->length, b->chars, b->length);
+  memcpy(chars, aChars, aLen);
+  memcpy(chars + aLen, bChars, bLen);
   chars[length] = '\0';
 
   ObjString* result = takeString(chars, length);
-//> Garbage Collection concatenate-pop
   pop();
   pop();
-//< Garbage Collection concatenate-pop
   push(OBJ_VAL(result));
 }
 //< Strings concatenate
@@ -628,8 +644,8 @@ static void concatenate() {
     ObjString* result = makeString(true, chars, length);
     push(OBJ_VAL(result));
   }
-
 */
+
 //> run
 static InterpretResult run() {
 //> Calls and Functions run
@@ -781,7 +797,8 @@ static InterpretResult run() {
         if (!tableGet(&vm.globals, OBJ_VAL(name), &value)) {
           // Chapter 24 Question 1:
           frame->ip = ip;
-          runtimeError("Undefined variable '%s'.", name->chars);
+          // Chapter 30 Question 2: use string helper
+          runtimeError("Undefined variable '%s'.", getStringChars(name));
           return INTERPRET_RUNTIME_ERROR;
         }
         push(value);
@@ -799,7 +816,8 @@ static InterpretResult run() {
           tableDelete(&vm.globals, OBJ_VAL(name)); // [delete]
           // Chapter 24 Question 1:
           frame->ip = ip;
-          runtimeError("Undefined variable '%s'.", name->chars);
+          // Chapter 30 Question 2: use string helper
+          runtimeError("Undefined variable '%s'.", getStringChars(name));
           return INTERPRET_RUNTIME_ERROR;
         }
         break;
@@ -932,7 +950,7 @@ static InterpretResult run() {
 //> Calls and Functions jump-if-false
 // Chapter 24 Question 1: Change to IP
         if (isFalsey(peek(0))) ip += offset;
-//< Calls and Functions jump-if-false
+//< Jumping Back and Forth jump-if-false
         break;
       }
 //< Jumping Back and Forth op-jump-if-false

@@ -160,6 +160,13 @@ ObjString* takeString(char* chars, int length) {
   }
 
 //< take-string-intern
+  // Chapter 30 Question 2: use inline short strings
+  if (length <= SHORT_STRING_MAX) {
+    ObjString* shortString = (ObjString*)newShortString(chars, length, hash);
+    FREE_ARRAY(char, chars, length + 1);
+    return shortString;
+  }
+
   return allocateString(chars, length, hash);
 //< Hash Tables take-string-hash
 }
@@ -174,25 +181,40 @@ ObjString* makeString(int length) {
 
 */
 //< take-string
+
+// Chapter 30 Question 2: allocate short string object
+ObjShortString* newShortString(const char* chars, int length, uint32_t hash) {
+  ObjShortString* string = (ObjShortString*)allocateObject(
+      sizeof(ObjShortString), OBJ_SHORT_STRING);
+  memcpy(string->chars, chars, length);
+  string->chars[length] = '\0';
+  string->hash = hash;
+
+  // Chapter 30 Question 2: intern short strings
+  push(OBJ_VAL(string));
+  tableSet(&vm.strings, OBJ_VAL(string), NIL_VAL);
+  pop();
+  incRef((Obj*)string);
+
+  return string;
+}
+
 ObjString* copyString(const char* chars, int length) {
-//> Hash Tables copy-string-hash
   uint32_t hash = hashString(chars, length);
-//> copy-string-intern
-  ObjString* interned = tableFindString(&vm.strings, chars, length,
-                                        hash);
+
+  // Chapter 30 Question 2: check interned strings first
+  ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
   if (interned != NULL) return interned;
 
-//< copy-string-intern
-//< Hash Tables copy-string-hash
+  // Chapter 30 Question 2: use inline short strings
+  if (length <= SHORT_STRING_MAX) {
+    return (ObjString*)newShortString(chars, length, hash);
+  }
+
   char* heapChars = ALLOCATE(char, length + 1);
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
-/* Strings object-c < Hash Tables copy-string-allocate
-  return allocateString(heapChars, length);
-*/
-//> Hash Tables copy-string-allocate
   return allocateString(heapChars, length, hash);
-//< Hash Tables copy-string-allocate
 }
 
 /* Chapter 19 Question 1: Replace copyString() with this version:
@@ -229,6 +251,16 @@ ObjUpvalue* newUpvalue(Value* slot) {
   return upvalue;
 }
 //< Closures new-upvalue
+
+// Chapter 30 Question 2 get object string chars
+static const char* objectStringChars(ObjString* string) {
+  if (string->obj.type == OBJ_SHORT_STRING) {
+    return ((ObjShortString*)string)->chars;
+  }
+
+  return string->chars;
+}
+
 //> Calls and Functions print-function-helper
 static void printFunction(ObjFunction* function) {
 //> print-script
@@ -237,7 +269,7 @@ static void printFunction(ObjFunction* function) {
     return;
   }
 //< print-script
-  printf("<fn %s>", function->name->chars);
+  printf("<fn %s>", objectStringChars(function->name));
 }
 //< Calls and Functions print-function-helper
 //> print-object
@@ -250,7 +282,7 @@ void printObject(Value value) {
 //< Methods and Initializers print-bound-method
 //> Classes and Instances print-class
     case OBJ_CLASS:
-      printf("%s", AS_CLASS(value)->name->chars);
+      printf("%s", objectStringChars(AS_CLASS(value)->name));
       break;
 //< Classes and Instances print-class
 //> Closures print-closure
@@ -266,7 +298,7 @@ void printObject(Value value) {
 //> Classes and Instances print-instance
     case OBJ_INSTANCE:
       printf("%s instance",
-             AS_INSTANCE(value)->klass->name->chars);
+             objectStringChars(AS_INSTANCE(value)->klass->name));
       break;
 //< Classes and Instances print-instance
 //> Calls and Functions print-native
@@ -283,6 +315,10 @@ void printObject(Value value) {
         printf("%.*s", AS_STRING(value)->length, AS_CSTRING(value));
         break;
       */
+    // Chapter 30 Question 2: print short string
+    case OBJ_SHORT_STRING:
+      printf("%s", AS_SHORT_STRING(value)->chars);
+      break;
 //> Closures print-upvalue
     case OBJ_UPVALUE:
       printf("upvalue");
